@@ -1,19 +1,19 @@
 defmodule Angler.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
-  @moduledoc false
-
   use Application
 
   @impl true
   def start(_type, _args) do
-    children = [
-      # Starts a worker by calling: Angler.Worker.start_link(arg)
-      # {Angler.Worker, arg}
+    bot_config = [
+      token: Application.fetch_env!(:angler, :token),
+      max_bot_concurrency: Application.fetch_env!(:angler, :max_bot_concurrency)
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
+    # TODO: Use webhook for prod env
+    children = [
+      {Finch, name: Angler.Finch},
+      {Telegram.Poller, bots: [{Angler.Bot, bot_config}]}
+    ]
+
     opts = [strategy: :one_for_one, name: Angler.Supervisor]
     Supervisor.start_link(children, opts)
   end
