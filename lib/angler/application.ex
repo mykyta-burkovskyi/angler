@@ -21,17 +21,17 @@ defmodule Angler.Application do
        ]}
     ]
 
-    # case Mix.env() do
-    #   :prod ->
-    #     {Telegram.Webhook,
-    #      config: [
-    #        host: Application.fetch_env!(:angler, :host),
-    #        local_port: Application.fetch_env!(:angler, :local_port)
-    #      ],
-    #      bots: bots}
+    case Mix.env() do
+      :prod ->
+        {Telegram.Webhook,
+         config: [
+           host: Application.fetch_env!(:angler, :host),
+           local_port: Application.fetch_env!(:angler, :local_port)
+         ],
+         bots: bots}
 
-    #   :dev ->
-    {Telegram.Poller, bots: bots}
-    # end
+      :dev ->
+        {Telegram.Poller, bots: bots}
+    end
   end
 end

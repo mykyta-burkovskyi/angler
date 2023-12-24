@@ -15,6 +15,8 @@ defmodule Angler.Bot do
         },
         token
       ) do
+    Logger.info("Got message from chat #{chat_id} with text #{message_text}")
+
     message_entities
     |> UrlExtractor.extract(message_text)
     |> Task.async_stream(
