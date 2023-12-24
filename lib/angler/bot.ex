@@ -1,4 +1,5 @@
 defmodule Angler.Bot do
+  alias Angler.Angles
   alias Angler.UrlExtractor
   use Telegram.Bot
 
@@ -8,19 +9,27 @@ defmodule Angler.Bot do
           "message" => %{
             "entities" => message_entities,
             "text" => message_text,
-            "chat" => %{"id" => chat_id, "username" => username},
+            "chat" => %{"id" => chat_id},
             "message_id" => message_id
           }
         },
         token
       ) do
-    message_entities |> UrlExtractor.extract(message_text) |> IO.inspect()
+    message_entities
+    |> UrlExtractor.extract(message_text)
+    |> Task.async_stream(
+      fn message_url ->
+        video_url = Angles.Tiktok.fish_out(message_url)
 
-    Telegram.Api.request(token, "sendMessage",
-      chat_id: chat_id,
-      reply_to_message_id: message_id,
-      text: "Hello #{username}!"
+        Telegram.Api.request(token, "sendVideo",
+          chat_id: chat_id,
+          reply_to_message_id: message_id,
+          video: video_url
+        )
+      end,
+      timeout: 5 * 60_000
     )
+    |> Stream.run()
   end
 
   def handle_update(_update, _token) do
