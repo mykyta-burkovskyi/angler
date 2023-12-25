@@ -15,12 +15,10 @@ defmodule Angler.Angles.Tiktok do
     details =
       Tesla.client([
         {Tesla.Middleware.Headers,
-         [{"User-Agent", "TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet"}]},
+         [{"User-Agent", Application.fetch_env!(:angler, :tiktok_user_agent)}]},
         Tesla.Middleware.DecodeJson
       ])
-      |> Tesla.get!(
-        "https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=#{video_id}"
-      )
+      |> Tesla.get!("#{Application.fetch_env!(:angler, :tiktok_feed_url)}?aweme_id=#{video_id}")
       |> Map.fetch!(:body)
 
     {video_id, details}

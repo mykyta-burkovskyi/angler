@@ -17,6 +17,7 @@ defmodule Angler.Bot do
       ) do
     message_entities
     |> UrlExtractor.extract(message_text)
+    |> Enum.filter(&String.contains?(&1, "tiktok"))
     |> Task.async_stream(
       fn message_url ->
         video_url = Angles.Tiktok.fish_out(message_url)
