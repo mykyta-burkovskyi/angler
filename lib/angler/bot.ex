@@ -1,4 +1,5 @@
 defmodule Angler.Bot do
+  alias Angler.Market
   alias Angler.Angles
   alias Angler.UrlExtractor
   use Telegram.Bot
@@ -20,13 +21,7 @@ defmodule Angler.Bot do
     |> Enum.filter(&String.contains?(&1, "tiktok"))
     |> Task.async_stream(
       fn message_url ->
-        video_url = Angles.Tiktok.fish_out(message_url)
-
-        Telegram.Api.request(token, "sendVideo",
-          chat_id: chat_id,
-          reply_to_message_id: message_id,
-          video: video_url
-        )
+        message_url |> Angles.Tiktok.fish_out() |> Market.sell_produce(token, chat_id, message_id)
       end,
       timeout: 5 * 60_000
     )

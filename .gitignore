@@ -24,3 +24,6 @@ angler-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Ignore vs code settings
+.vscode/

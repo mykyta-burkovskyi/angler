@@ -23,8 +23,8 @@ defmodule Angler.MixProject do
   defp deps do
     [
       {:telegram, github: "visciang/telegram", tag: "1.2.1"},
-      {:finch, "~> 0.16.0"},
-      {:bandit, "~> 1.1.2"}
+      {:bandit, "~> 1.1.2"},
+      {:httpoison, "~> 2.2"}
     ]
   end
 end

@@ -5,6 +5,7 @@ defmodule Angler.UrlExtractor do
     message_entities
     |> Enum.filter(&(&1["type"] == "url"))
     |> Enum.map(extract_url)
+    |> Enum.uniq()
   end
 
   defp get_extractor(message_text) do

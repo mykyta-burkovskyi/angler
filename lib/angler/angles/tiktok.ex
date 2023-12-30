@@ -1,6 +1,6 @@
 defmodule Angler.Angles.Tiktok do
   def fish_out(url) do
-    url |> process_redirect |> get_video_id |> get_video_details |> get_video_url
+    url |> process_redirect |> get_video_id |> get_video_details |> get_video_urls
   end
 
   defp process_redirect(url) do
@@ -24,19 +24,22 @@ defmodule Angler.Angles.Tiktok do
     {video_id, details}
   end
 
-  defp get_video_url(
+  defp get_video_urls(
          {video_id,
           %{
             "aweme_list" => [
               %{
                 "aweme_id" => aweme_id,
-                "video" => %{"download_addr" => %{"url_list" => [video_url | _]}}
+                "video" => %{
+                  "download_addr" => %{"url_list" => download_urls},
+                  "play_addr" => %{"url_list" => play_urls}
+                }
               }
               | _
             ]
           }}
        )
        when aweme_id == video_id do
-    video_url
+    download_urls ++ play_urls
   end
 end
