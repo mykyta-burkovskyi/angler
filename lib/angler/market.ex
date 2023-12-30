@@ -4,7 +4,7 @@ defmodule Angler.Market do
   def sell_produce(video_urls, token, chat_id, message_id) do
     with :error <- send_video_by_url(video_urls, token, chat_id, message_id),
          :error <- send_video_by_stream(video_urls, token, chat_id, message_id) do
-      Logger.info("Failed to send video to #{chat_id}")
+      Logger.error("Failed to send video to #{chat_id}")
     else
       :ok ->
         Logger.info(
