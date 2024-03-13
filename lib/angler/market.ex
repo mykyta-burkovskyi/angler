@@ -39,12 +39,10 @@ defmodule Angler.Market do
     Logger.info("Sending video by passing video stream to Telegram API")
 
     Enum.reduce_while(video_urls, :error, fn video_url, _acc ->
-      video_stream = get_video_stream(video_url) |> Stream.map(& &1)
-
       case Telegram.Api.request(token, "sendVideo",
              chat_id: chat_id,
              reply_to_message_id: message_id,
-             video: {:file_content, video_stream, "tiktok.mp4"}
+             video: {:file_content, get_video_stream(video_url), "tiktok.mp4"}
            ) do
         {:ok, _} ->
           {:halt, :ok}
@@ -61,41 +59,36 @@ defmodule Angler.Market do
 
   defp get_video_stream(video_url) do
     Stream.resource(
-      fn ->
-        HTTPoison.get!(video_url, [], stream_to: self(), async: :once)
+      fn -> Finch.build(:get, video_url) |> Finch.async_request(Angler.Finch) end,
+      fn ref ->
+        receive do
+          {_ref, {:status, 200}} ->
+            Logger.debug("Received 200 status code")
+            {[], ref}
+
+          {_ref, {:headers, headers}} ->
+            Logger.debug("Received headers: #{inspect(headers)}")
+            {[], ref}
+
+          {_ref, {:data, chunk}} ->
+            Logger.debug("Received chunk: #{inspect(chunk)}")
+            {[chunk], ref}
+
+          {_ref, :done} ->
+            Logger.debug("Received done")
+            {:halt, ref}
+
+          {_ref, {:error, error}} ->
+            Logger.error("Received error: #{inspect(error)}")
+            {:halt, ref}
+
+          _ ->
+            Logger.error("Received unknown message")
+            {:halt, ref}
+        end
       end,
-      fn
-        %HTTPoison.AsyncResponse{id: id} = resp ->
-          receive do
-            %HTTPoison.AsyncStatus{id: ^id} ->
-              HTTPoison.stream_next(resp)
-              {[], resp}
-
-            %HTTPoison.AsyncHeaders{id: ^id} ->
-              HTTPoison.stream_next(resp)
-              {[], resp}
-
-            %HTTPoison.AsyncChunk{id: ^id, chunk: chunk} ->
-              HTTPoison.stream_next(resp)
-              {[chunk], resp}
-
-            %HTTPoison.AsyncEnd{id: ^id} ->
-              {:halt, resp}
-          after
-            5_000 ->
-              {:halt, resp}
-          end
-
-        _ ->
-          {:halt, nil}
-      end,
-      fn
-        %HTTPoison.AsyncResponse{id: id} ->
-          :hackney.stop_async(id)
-
-        _ ->
-          :ok
-      end
+      fn ref -> Finch.cancel_async_request(ref) end
     )
+    |> Stream.map(& &1)
   end
 end

@@ -27,3 +27,5 @@ angler-*.tar
 
 # Ignore vs code settings
 .vscode/
+
+.env

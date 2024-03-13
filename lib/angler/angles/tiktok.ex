@@ -1,6 +1,10 @@
 defmodule Angler.Angles.Tiktok do
   def fish_out(url) do
-    url |> process_redirect |> get_video_id |> get_video_details |> get_video_urls
+    url
+    |> process_redirect
+    |> get_video_id
+    |> get_video_details
+    |> get_video_urls
   end
 
   defp process_redirect(url) do

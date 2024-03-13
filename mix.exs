@@ -14,7 +14,7 @@ defmodule Angler.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger, :wx, :observer, :runtime_tools],
       mod: {Angler.Application, []}
     ]
   end
@@ -23,8 +23,8 @@ defmodule Angler.MixProject do
   defp deps do
     [
       {:telegram, github: "visciang/telegram", tag: "1.2.1"},
-      {:bandit, "~> 1.1.2"},
-      {:httpoison, "~> 2.2"}
+      {:bandit, "~> 1.3"},
+      {:finch, "~> 0.18"}
     ]
   end
 end
