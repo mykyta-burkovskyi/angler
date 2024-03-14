@@ -14,8 +14,6 @@ defmodule Angler.Angles.Tiktok do
   end
 
   defp process_redirect(url) do
-    IO.inspect(url |> URI.to_string(), label: "URL")
-
     Tesla.client([Tesla.Middleware.FollowRedirects])
     |> Tesla.get!(url |> URI.to_string())
     |> Map.fetch!(:url)
