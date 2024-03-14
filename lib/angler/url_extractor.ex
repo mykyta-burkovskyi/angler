@@ -3,9 +3,10 @@ defmodule Angler.UrlExtractor do
     extract_url = message_text |> get_extractor
 
     message_entities
-    |> Enum.filter(&(&1["type"] == "url"))
-    |> Enum.map(extract_url)
-    |> Enum.uniq()
+    |> Stream.filter(&(&1["type"] == "url"))
+    |> Stream.map(extract_url)
+    |> Stream.uniq()
+    |> Stream.map(&URI.parse/1)
   end
 
   defp get_extractor(message_text) do

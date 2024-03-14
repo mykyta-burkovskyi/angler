@@ -6,4 +6,7 @@ config :angler,
   host: "#{System.fetch_env!("APP_NAME")}.gigalixirapp.com",
   local_port: System.get_env("PORT", "4000") |> String.to_integer(),
   tiktok_user_agent: System.fetch_env!("TIKTOK_USER_AGENT"),
-  tiktok_feed_url: System.fetch_env!("TIKTOK_FEED_URL")
+  tiktok_feed_url: System.fetch_env!("TIKTOK_FEED_URL"),
+  instagram_api_url: System.fetch_env!("INSTAGRAM_API_URL"),
+  instagram_api_headers: System.fetch_env!("INSTAGRAM_API_HEADERS"),
+  instagram_api_body_template: System.fetch_env!("INSTAGRAM_API_BODY_TEMPLATE")

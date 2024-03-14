@@ -1,4 +1,10 @@
 defmodule Angler.Angles.Tiktok do
+  @behaviour Angler.Angles.Angle
+
+  def is_matching_url?(url) do
+    url |> Map.get(:host) |> String.contains?("tiktok.com")
+  end
+
   def fish_out(url) do
     url
     |> process_redirect
@@ -8,11 +14,16 @@ defmodule Angler.Angles.Tiktok do
   end
 
   defp process_redirect(url) do
-    Tesla.client([Tesla.Middleware.FollowRedirects]) |> Tesla.get!(url) |> Map.fetch!(:url)
+    IO.inspect(url |> URI.to_string(), label: "URL")
+
+    Tesla.client([Tesla.Middleware.FollowRedirects])
+    |> Tesla.get!(url |> URI.to_string())
+    |> Map.fetch!(:url)
+    |> URI.parse()
   end
 
   defp get_video_id(url) do
-    url |> URI.parse() |> Map.get(:path) |> String.split("/") |> List.last()
+    url |> Map.get(:path) |> String.split("/", trim: true) |> List.last()
   end
 
   defp get_video_details(video_id) do
