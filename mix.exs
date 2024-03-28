@@ -24,7 +24,8 @@ defmodule Angler.MixProject do
     [
       {:telegram, github: "visciang/telegram", tag: "1.2.1"},
       {:bandit, "~> 1.3"},
-      {:finch, "~> 0.18"}
+      {:finch, "~> 0.18"},
+      {:uuid, "~> 1.1"}
     ]
   end
 end

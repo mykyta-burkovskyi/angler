@@ -6,7 +6,6 @@ defmodule Angler.UrlExtractor do
     |> Stream.filter(&(&1["type"] == "url"))
     |> Stream.map(extract_url)
     |> Stream.uniq()
-    |> Stream.map(&URI.parse/1)
   end
 
   defp get_extractor(message_text) do
@@ -17,11 +16,6 @@ defmodule Angler.UrlExtractor do
       message_text_utf16
       |> binary_slice(offset * 2, length * 2)
       |> :unicode.characters_to_binary(:utf16, :utf8)
-      |> prepend_https_if_needed
     end
-  end
-
-  defp prepend_https_if_needed(url) do
-    if String.starts_with?(url, "https://"), do: url, else: "https://" <> url
   end
 end
