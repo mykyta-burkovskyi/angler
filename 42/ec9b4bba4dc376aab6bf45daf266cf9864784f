@@ -1,0 +1,604 @@
+priv/repo/migrations/20260926123603_create_entries.exs
+  s_176a6e051212f3::t_b227c16a3b63f3 5-64,69-74,79-81
+  s_176a6e051212f3::t_6a388ddc14a329 65-68,75-78
+  s_176a6e051212f3::t_9df1a7d3fd6249 1-4,82-83
+.gitignore
+  s_176a6e051212f3::t_92062fed7e3ee6 38-39,41-51
+  s_176a6e051212f3::t_6f6cae7f52d049 10,22-24,28-29,31-32,34-36
+  s_176a6e051212f3::t_02655421f100e1 37,52-55
+lib/angler_web/controllers/media_controller.ex
+  s_176a6e051212f3::t_3cd1bc871e05f8 1-5,10-12,21,106
+  s_176a6e051212f3::t_2d8ba0f7d29dd6 6-9,13-20,22-105
+test/angler/media/slideshow_test.exs
+  s_176a6e051212f3::t_4b8570a16c0a91 1-276
+test/angler/media/slideshow/fetch_test.exs
+  s_176a6e051212f3::t_4b8570a16c0a91 1-132
+priv/repo/migrations/20260926155128_add_history_days_to_settings.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-10
+lib/angler/entries.ex
+  s_176a6e051212f3::t_909851474d4e85 16-19,23,163,193,197,207,302,306,313-314
+  s_176a6e051212f3::t_28bd90389d856e 64-66,122-123,125-131,133-139,146-147,149-152,154-159,165-172,177,180-186,189-190,199-200,202-206,308-312
+  s_176a6e051212f3::t_c44d5f43713ff2 1-15,20-22,24-63,67-121,124,132,140-145,148,153,160-162,164,173-176,178-179,187-188,191-192,194-196,198,201,208-301,303-305,307,315
+lib/angler_web/live/settings_live.html.heex
+  s_176a6e051212f3::t_16b8ffc68f7f74 36-43,55,63,105
+  s_176a6e051212f3::t_b8215f589cec8a 1-35,44-54,56-62,64-104,106-130,132-134,143-145
+  s_176a6e051212f3::t_909851474d4e85 131,135-142
+lib/angler_web/components/platform_components.ex
+  s_176a6e051212f3::t_909851474d4e85 1-79
+priv/static/images/logo.svg
+  s_176a6e051212f3::t_6f6cae7f52d049 14
+  s_176a6e051212f3::t_b8215f589cec8a 1-13
+lib/angler/media/probe.ex
+  s_176a6e051212f3::t_909851474d4e85 1-281
+lib/angler/media/tools.ex
+  s_176a6e051212f3::t_909851474d4e85 1-93
+lib/angler_web/components/stat_components.ex
+  s_176a6e051212f3::t_909851474d4e85 1-122
+assets/js/app.js
+  s_176a6e051212f3::t_b8215f589cec8a 36,39,59-61,63-65,67
+  s_176a6e051212f3::t_6f6cae7f52d049 1-35,37-38,68-112
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 40-58,62,66
+lib/angler/media/error.ex
+  s_176a6e051212f3::t_6a388ddc14a329 20-21
+  s_176a6e051212f3::t_f615de7a5d8045 1-17,22
+  s_176a6e051212f3::t_6c6670cc4c1b20 18-19
+lib/angler/media/egress_proxy.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-156
+lib/angler/media/slideshow/sound.ex
+  s_176a6e051212f3::t_4b8570a16c0a91 1-113
+lib/angler_web/components/layouts/root.html.heex
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 17-25,36,43-46
+  s_176a6e051212f3::t_b8215f589cec8a 7-9,56
+  s_176a6e051212f3::t_6f6cae7f52d049 1-6,10-16,26-35,37-42,47-55,57-59
+priv/static/robots.txt
+  s_176a6e051212f3::t_6f6cae7f52d049 1-5
+lib/angler_web/origin_check.ex
+  s_176a6e051212f3::t_16b8ffc68f7f74 34
+  s_176a6e051212f3::t_28bd90389d856e 26,37-39
+  s_176a6e051212f3::t_7bb50f84a4b832 1-25,27-33,35-36,40-54
+priv/repo/migrations/.formatter.exs
+  s_176a6e051212f3::t_6f6cae7f52d049 1-4
+lib/angler_web/components/status_components.ex
+  s_176a6e051212f3::t_909851474d4e85 1-180
+test/angler/entries/history_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-60
+.formatter.exs
+  s_176a6e051212f3::t_6f6cae7f52d049 2-5
+test/angler_web/live/dashboard_auth_test.exs
+  s_176a6e051212f3::t_b8215f589cec8a 1-54
+test/fixtures/media/fake-yt-dlp
+  s_176a6e051212f3::t_28bd90389d856e 1-132
+lib/angler/application.ex
+  s_176a6e051212f3::t_23f6d73ff6cd4d 13,18,23-27,43-44
+  s_176a6e051212f3::t_6a388ddc14a329 14-15
+  s_176a6e051212f3::t_6f6cae7f52d049 2-5,11-12,16,30-31,36-41
+  s_176a6e051212f3::t_cd289365f810d5 19-20
+  s_176a6e051212f3::t_398476f26f73d0 21-22
+test/angler/media/command_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-245
+lib/angler/pipeline/upload.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-231
+  s_176a6e051212f3::t_adb1aa3d682238 232-235
+test/angler_web/origin_check_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-63
+lib/angler_web/dashboard_auth.ex
+  s_176a6e051212f3::t_6a388ddc14a329 26-27
+  s_176a6e051212f3::t_5830b05636aa62 1-25,28-69
+test/angler_web/components/platform_components_test.exs
+  s_176a6e051212f3::t_909851474d4e85 1-19
+lib/angler/media/ytdlp/progress.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-183
+config/prod.exs
+  s_176a6e051212f3::t_fc443aebd42bac 9-10
+  s_176a6e051212f3::t_7bb50f84a4b832 11-13
+  s_176a6e051212f3::t_6f6cae7f52d049 3-8,14-15,17-19
+lib/angler/storage/disk.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-120
+lib/angler/pipeline/producer.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-176
+lib/angler_web/controllers/error_html.ex
+  s_176a6e051212f3::t_6f6cae7f52d049 1-24
+lib/angler_web/live/entries_live.html.heex
+  s_176a6e051212f3::t_b8215f589cec8a 1-178
+lib/angler/telegram/rate_limiter.ex
+  s_176a6e051212f3::t_23f6d73ff6cd4d 1-5,25-27,29,52-53,65,81,84,91-95,261
+  s_176a6e051212f3::t_6a7f1b0a662746 54-57
+  s_176a6e051212f3::t_28bd90389d856e 9-10,51,71-77,79,100-104,142-148,154,168,182,192,199,226,239,243,248
+  s_176a6e051212f3::t_953e3194f33116 6-8,11-24,28,30-50,58-64,66-70,78,80,82-83,85-90,96-99,105-141,149-153,155-167,169-181,183-191,193-198,200-225,227-238,240-242,244-247,249-260
+test/angler/telegram/poller_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 34,57,69,81,92-104,108,123
+  s_176a6e051212f3::t_189f2bf50e6a9f 1-33,35-56,58-68,70-80,82-91,105-107,109-122,124-148
+lib/angler_web/live/entry_live.ex
+  s_176a6e051212f3::t_b8215f589cec8a 2-6,10-12,14-16,19,21-22,28,31,35,43-44,46-80,85
+  s_176a6e051212f3::t_3cd1bc871e05f8 1,7-8,23,25,45,86-87
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 13,17-18,20,24,26-27,29-30,32-34,36-42,81-84
+  s_176a6e051212f3::t_909851474d4e85 9
+lib/angler/media/slideshow/commands.ex
+  s_176a6e051212f3::t_4b8570a16c0a91 1-186
+test/angler/pipeline_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-282,284-774
+  s_176a6e051212f3::t_9539abe199b340 283
+  s_176a6e051212f3::t_5fd8240021391a 775-801
+lib/angler_web/router.ex
+  s_176a6e051212f3::t_40e4e3413fc0de 4-5,15-16,19-22,24-26,28-33,35-38,40-48
+  s_176a6e051212f3::t_6f6cae7f52d049 1-3,6-14,17-18,23,27,34,39,49-50
+lib/angler_web/live/entries_live/rows.ex
+  s_176a6e051212f3::t_909851474d4e85 1-192
+priv/repo/migrations/20260926123605_create_settings.exs
+  s_176a6e051212f3::t_781b5556ceb7f9 5-7,9-11,13-22
+  s_176a6e051212f3::t_e7bf2a9674d82a 1-4,8,23-24
+  s_176a6e051212f3::t_4c6c538e653976 12
+lib/angler_web/telemetry.ex
+  s_176a6e051212f3::t_6f6cae7f52d049 1-93
+test/angler/pipeline/db_retry_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-88
+test/angler_web/controllers/telegram_webhook_controller_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 18,27,43,52,61,69,81,98,108,116,125,135-143
+  s_176a6e051212f3::t_e15fad094933d0 1-17,19-26,28-42,44-51,53-60,62-68,70-80,82-97,99-107,109-115,117-124,126-134,144-159
+test/angler_web/components/status_components_test.exs
+  s_176a6e051212f3::t_909851474d4e85 1-71
+test/support/data_case.ex
+  s_176a6e051212f3::t_6f6cae7f52d049 1-58
+priv/repo/seeds.exs
+  s_176a6e051212f3::t_6f6cae7f52d049 1-11
+lib/angler_web.ex
+  s_176a6e051212f3::t_909851474d4e85 84-89
+  s_176a6e051212f3::t_6f6cae7f52d049 1-83,90-115
+test/angler/storage_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 15-633,647-648
+  s_176a6e051212f3::t_48c9c111142689 1-14,634-646,649
+test/angler_web/controllers/error_html_test.exs
+  s_176a6e051212f3::t_6f6cae7f52d049 1-14
+CLAUDE.md
+  s_176a6e051212f3::t_28bd90389d856e 60-63
+  s_176a6e051212f3::t_7f7433fb026818 36-42
+  s_176a6e051212f3::t_cfab18bc8481e4 55-57
+  s_176a6e051212f3::t_604c89bd6f1d95 70-73
+  s_176a6e051212f3::t_2c5d71506a34aa 1-35,43-54,58-59,64-67,74
+  s_176a6e051212f3::t_86b16fce63366c 68-69
+lib/angler/media/slideshow/render.ex
+  s_176a6e051212f3::t_4b8570a16c0a91 1-232
+test/angler/links/idn_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-57
+lib/angler_web/endpoint.ex
+  s_176a6e051212f3::t_6f6cae7f52d049 1-43,45,47,49,51-62
+  s_176a6e051212f3::t_40e4e3413fc0de 46,48,50
+  s_176a6e051212f3::t_4fc9ed759caf94 44
+lib/angler/pipeline.ex
+  s_176a6e051212f3::t_6a388ddc14a329 93-97
+  s_176a6e051212f3::t_28bd90389d856e 5-91,99-178
+  s_176a6e051212f3::t_a5041ebf15d5a1 1-4,92,98,179
+lib/angler/media/ytdlp.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-327
+test/angler/telegram/sent_tracker_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-92
+test/angler/pipeline/failures_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-215
+test/angler/links_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 10-11,16,19,26-27,29,32,35,45,48,53,57,60,67,73,77,80,82-220,229,237,243
+  s_176a6e051212f3::t_7762c8abf1b421 1-9,12-15,17-18,20-25,28,30-31,33-34,36-44,46-47,49-52,54-56,58-59,61-66,68-72,74-76,78-79,81,221-228,230-236,238-242,244-245
+deploy/caddy/Caddyfile
+  s_176a6e051212f3::t_28bd90389d856e 5-19
+  s_176a6e051212f3::t_510d706aae4e22 20-24
+  s_176a6e051212f3::t_2cd96d350581e3 1-4,25
+lib/angler_web/live/settings_live.ex
+  s_176a6e051212f3::t_b8215f589cec8a 2-10,12,14-22,28-83,85-102,104-139,141-147,149-158,165-180,184-185,188-211
+  s_176a6e051212f3::t_3cd1bc871e05f8 1,11,84,103,140,148,212
+  s_176a6e051212f3::t_909851474d4e85 13
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 23-27,159-164,181-183,186-187
+test/angler/storage/janitor_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 86,168-169
+  s_176a6e051212f3::t_30329b55afafaa 139-162,180-187
+  s_176a6e051212f3::t_7ac127001fcd18 1-85,87-138,163-167,170-179,188-216
+test/angler_web/live/entry_live_test.exs
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 60-71,157-165,211-228,272-285
+  s_176a6e051212f3::t_b8215f589cec8a 1-59,72-156,166-210,229-271,286-323
+test/angler/media/probe_test.exs
+  s_176a6e051212f3::t_909851474d4e85 1-206
+lib/angler/media/output.ex
+  s_176a6e051212f3::t_65bf0a8bc3cc6c 1-27
+lib/angler/media/slideshow/fetch.ex
+  s_176a6e051212f3::t_4b8570a16c0a91 1-148
+lib/angler/telegram/video_body.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-73
+config/dev.exs
+  s_176a6e051212f3::t_6f6cae7f52d049 1-54,57-76
+  s_176a6e051212f3::t_c8eb27425dcf42 55-56
+config/config.exs
+  s_176a6e051212f3::t_28bd90389d856e 28-31
+  s_176a6e051212f3::t_c8eb27425dcf42 14-26,32-39
+  s_176a6e051212f3::t_3f893e472f9a43 58
+  s_176a6e051212f3::t_6f6cae7f52d049 1-7,10-13,40-57,59-84,86-87
+  s_176a6e051212f3::t_ec37c5343d9c90 27
+lib/angler/media/slideshow.ex
+  s_176a6e051212f3::t_4b8570a16c0a91 1-162
+test/angler/media/slideshow_network_test.exs
+  s_176a6e051212f3::t_4b8570a16c0a91 1-164
+test/angler/media/download_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-328
+lib/angler_web/components/layouts.ex
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 88,115,178-180,184-188
+  s_176a6e051212f3::t_6f6cae7f52d049 1-2,6-15,18-20,22-40,47,57,66,69,72-73,75,80,94-95,100,103,119-175,177,181-183,190-191,194-195,198,200-202,205-206,209,211-213,216-217,220,222-226
+  s_176a6e051212f3::t_927a285b37467f 3-5,16-17,21,41-46,48-56,58-65,67-68,70-71,74,76-79,81-87,89-93,96-99,101-102,104-114,116-118,176,189,192-193,196-197,199,203-204,207-208,210,214-215,218-219,221
+lib/angler_web/live/entry_live.html.heex
+  s_176a6e051212f3::t_909851474d4e85 12,14,18,21-22,25,29-30
+  s_176a6e051212f3::t_b8215f589cec8a 1-11,13,15-17,19-20,23-24,26-28,31-47
+test/angler_web/live/entries_live/rows_test.exs
+  s_176a6e051212f3::t_909851474d4e85 1-196
+test/angler/media/slideshow/render_test.exs
+  s_176a6e051212f3::t_4b8570a16c0a91 1-294
+test/angler_web/components/entry_components_test.exs
+  s_176a6e051212f3::t_909851474d4e85 1-109
+lib/angler/telegram/updates.ex
+  s_176a6e051212f3::t_28bd90389d856e 14-171
+  s_176a6e051212f3::t_b1858a98b7035c 1-13,172-306
+test/angler/telegram/updates_test.exs
+  s_176a6e051212f3::t_f9239f715a53d0 257-280
+  s_176a6e051212f3::t_b5d242f158a06d 307-311
+  s_176a6e051212f3::t_28bd90389d856e 47,58,75,91,106,114,120-121,123-180,192,197,217,220,232,240-241,248,281,291,316,323,333,336-361
+  s_176a6e051212f3::t_4ca4faf1a24a5b 1-46,48-57,59-74,76-90,92-105,107-113,115-119,122,181-191,193-196,198-216,218-219,221-231,233-239,242-247,249-256,282-290,292-306,312-315,317-322,324-332,334-335,362-363
+test/angler/media/egress_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-105
+lib/angler/media/command.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-339
+config/runtime.exs
+  s_176a6e051212f3::t_7bb50f84a4b832 200,205
+  s_176a6e051212f3::t_28bd90389d856e 12-17,21-43,46-47,82,104-126,140-141,153-156,173,198
+  s_176a6e051212f3::t_f9661724f67195 3-6,19,52,67-81,86-103,127-139,142-150,157-162,177,184,187-192,194-197,199,207,209
+  s_176a6e051212f3::t_6f6cae7f52d049 48-51,53-66,163-166,168-172,174-176,178-180,182-183,185-186,193,206,208,210-213
+  s_176a6e051212f3::t_6a388ddc14a329 7-11,18,20,44-45,83-85,201-204
+  s_176a6e051212f3::t_60d7030d41939f 151-152,167,181
+lib/angler/media/updater.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-203
+lib/angler/links/idn.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-111
+lib/angler/links.ex
+  s_176a6e051212f3::t_28bd90389d856e 12-172,181,188,197
+  s_176a6e051212f3::t_28b45124dfa4dd 1-11,173-180,182-187,189-196,198-206
+lib/angler/entries/listing.ex
+  s_176a6e051212f3::t_909851474d4e85 1-89
+test/angler_web/components/common_components_test.exs
+  s_176a6e051212f3::t_909851474d4e85 1-51
+lib/angler/telegram/error.ex
+  s_176a6e051212f3::t_28bd90389d856e 11-13,15-23,31-32,37,59,67-70,72,77,80-97
+  s_176a6e051212f3::t_c1d9417068572c 1-10,14,24-30,33-34,61-66,71,73-75,113,116
+  s_176a6e051212f3::t_0a39db7f2ea22b 35-36,38-58,60,76,78-79,98-112,114-115
+lib/angler/media/ffmpeg.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-266
+test/angler/pipeline/media_kind_test.exs
+  s_176a6e051212f3::t_4b8570a16c0a91 1-98,102-114
+  s_176a6e051212f3::t_1e51fc0aff4211 99-101
+assets/css/app.css
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 45-46
+  s_176a6e051212f3::t_6f6cae7f52d049 1-22,121-125
+  s_176a6e051212f3::t_b8215f589cec8a 23-44,47-120
+test/angler/telegram/rate_limiter_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 22,26,31,36-202,206,212-213,224,242
+  s_176a6e051212f3::t_93076f864b7be8 1-21,23-25,27-30,32-35,203-205,207-211,214-223,225-241,243
+lib/angler.ex
+  s_176a6e051212f3::t_6f6cae7f52d049 1-9
+test/support/fake_media.ex
+  s_176a6e051212f3::t_0dc2774b595876 1-123
+lib/angler/pipeline/failures.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-124
+lib/angler/telegram.ex
+  s_176a6e051212f3::t_909851474d4e85 25-27,29,37-38,47,99,136-137,161-163,172-174,186-193,207-211
+  s_176a6e051212f3::t_90eaa7410ccc6d 1-6,22,28,30-32,40,51-58,68,70,74,79-81,86,89,102-111,116-117,120-121,133,141-144,149,159-160,166-167,176,182,228
+  s_176a6e051212f3::t_28bd90389d856e 7-21,39,44,78,85,118-119,135,138-140,148,177-181,196,200-205
+  s_176a6e051212f3::t_38b1d42bbbac6f 23-24,33-36,41-43,45-46,48-50,59-67,69,71-73,75-77,82-84,87-88,90-98,100-101,112-115,122-132,134,145-147,150-158,164-165,168-171,175,183-185,194-195,197-199,206,212-227
+lib/angler/settings/setting.ex
+  s_176a6e051212f3::t_6a388ddc14a329 87-90,92-99
+  s_176a6e051212f3::t_e59914994365da 1-11,13,25-32,36-38,40-42,44-56,58-76,78-82,100-105,107-141,144-150,162-171
+  s_176a6e051212f3::t_f9239f715a53d0 142-143
+  s_176a6e051212f3::t_28bd90389d856e 12,33-35,57,77,83-86,91,106,151-161
+  s_176a6e051212f3::t_a799d5d6c7ced0 14-24,39,43,172-175
+test/angler/media/tiktok_test.exs
+  s_176a6e051212f3::t_65dd5cebf5ee86 6-7,376
+  s_176a6e051212f3::t_1e51fc0aff4211 1-5,8-375,377-379
+lib/angler_web/live/settings_live/panel_components.ex
+  s_176a6e051212f3::t_909851474d4e85 1-212
+  s_176a6e051212f3::t_af341d1d3f28a8 213-242
+lib/angler/media/download.ex
+  s_176a6e051212f3::t_70cd32ddbe0879 1-2,5-10,15-26,32-35
+  s_176a6e051212f3::t_0dc2774b595876 3-4,11-14,27-31
+test/angler/pipeline/retry_policy_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-295
+test/angler/settings_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-84
+lib/angler/media/egress.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-115
+lib/angler/repo.ex
+  s_176a6e051212f3::t_6f6cae7f52d049 1-5
+lib/angler_web/components/core_components.ex
+  s_176a6e051212f3::t_6f6cae7f52d049 1-2,5,10,12-55,57-58,64,71-73,75-76,78-94,96-97,103-106,115-118,120-124,126-137,147-175,177-194,197-236,239-240,242-244,246-258,261-265,270-271,273-277,280-281,284-287,290-291,294-298,304,307-311,314-315,317-320,323,326,330-335,338-339,342-347,350,353-354,361,364,366,370,403-405,411,418-429,433-434,436-438,440-445,447-477,481,483-484,486-497,499,505-506,509-515,518-530,534-539,544,546-571,573-577,579-589,591-625
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 237-238,241,259-260,272,278-279,292-293,305-306,312-313,324-325,328-329,336-337,351-352,362-363,373-402,406-410,412-417
+  s_176a6e051212f3::t_61b9221752e229 3-4,6-9,11,56,59-63,65-70,74,77,95,98-102,107-114,119,125,138-146,176,195-196,245,266-269,282-283,288-289,299-303,316,321-322,327,340-341,348-349,355-360,365,367-369,371-372,430-432,435,439,446,478-480,482,485,498,500-504,507-508,516-517,531-533,540-543,545,572,578,590
+test/angler/media/ytdlp_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-261,278-436
+  s_176a6e051212f3::t_fb45533afe60fb 262-277
+test/angler/media/slideshow/plan_test.exs
+  s_176a6e051212f3::t_4b8570a16c0a91 1-170
+test/angler/pipeline/job_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-111
+test/angler_web/components/stat_components_test.exs
+  s_176a6e051212f3::t_909851474d4e85 1-58
+test/angler/media/updater_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-196
+.env.example
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 2,4,10-161
+  s_176a6e051212f3::t_4a92bc1b6230bc 1,3,5-9,162-178
+lib/angler_web/live/entry_actions.ex
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 1-71
+lib/angler/telegram/health.ex
+  s_176a6e051212f3::t_3754446fa75c7f 1-85
+test/angler/pipeline/producer_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-235
+lib/angler_web/live/settings_live/form_components.ex
+  s_176a6e051212f3::t_909851474d4e85 1-109
+lib/angler_web/controllers/health_controller.ex
+  s_176a6e051212f3::t_40e4e3413fc0de 1-11
+lib/angler/pipeline/job.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-33,36-119,121-149,151-232
+  s_176a6e051212f3::t_44a2cfdee46344 34-35,120,150
+lib/angler/media/prepare.ex
+  s_176a6e051212f3::t_909851474d4e85 1-174
+lib/angler_web/live/entries_live.ex
+  s_176a6e051212f3::t_b8215f589cec8a 2-5,9,11,13,16,19,21-26,32-47,49,51-53,55-66,68,74,80,82,84-86,88-90,92-93,98-103,108-111,118,122,135,143-183,185,188-208
+  s_176a6e051212f3::t_3cd1bc871e05f8 1,10,50,54,77,81,184,186-187,209
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 12,14,17-18,20,27-31,69-73,75-76,78-79,94-97,104-107,112-117,119-121,123-134,136-142
+  s_176a6e051212f3::t_909851474d4e85 6-8,15,48,67,83,87,91
+mix.exs
+  s_176a6e051212f3::t_6f6cae7f52d049 9,11-13,22,26-27,29-31,34-35,39-51,54,57,59,61,63-71,74,78-102
+  s_176a6e051212f3::t_3318d5d3fea23c 8,14-15,19-21,23-25,28,55-56,58,60,62,72-73,75-77
+lib/angler_web/controllers/telegram_webhook_controller.ex
+  s_176a6e051212f3::t_3cd1bc871e05f8 1-5,12-14,44
+  s_176a6e051212f3::t_7c3391d913f0b8 6-11,15-43,45-50
+test/angler/entries_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-170
+test/angler/media/egress_proxy_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-160
+lib/angler_web/live/entry_live/overview_components.ex
+  s_176a6e051212f3::t_909851474d4e85 1-233
+assets/tsconfig.json
+  s_176a6e051212f3::t_6f6cae7f52d049 1-32
+test/angler_web/slideshow_badge_test.exs
+  s_176a6e051212f3::t_909851474d4e85 1-80
+lib/angler_web/live/entry_live/panel_components.ex
+  s_176a6e051212f3::t_909851474d4e85 1-207
+lib/angler/entries/entry.ex
+  s_176a6e051212f3::t_0dc2774b595876 77-78
+  s_176a6e051212f3::t_3892e06cecb16d 1-76,79-120
+test/angler_web/live/settings_live_test.exs
+  s_176a6e051212f3::t_40152dcd9999d7 30-31,38-49,58-89,120-121,159-160,178-179,185-201,308-309,314,365-394,402-445
+  s_176a6e051212f3::t_b8215f589cec8a 1-9,11,20-29,32-37,50-57,90-119,122-151,153-158,161-170,172-177,180-184,202-248,263-296,298-304,306-307,310-313,315-316,318-321,323,446-449,451-462,464-468
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 10,249-262,325-364
+  s_176a6e051212f3::t_69a4c4ce0efbfe 12-19
+  s_176a6e051212f3::t_30329b55afafaa 324
+  s_176a6e051212f3::t_3754446fa75c7f 395-401
+  s_176a6e051212f3::t_82b3df1401c624 297,305,317,322,450,463
+  s_176a6e051212f3::t_968a161a473a3b 152,171
+test/angler/media/ffmpeg_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-217
+test/angler/media_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-383
+lib/angler/pipeline/feedback.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-94,96-154
+  s_176a6e051212f3::t_16b8ffc68f7f74 95
+test/support/telegram_fixtures.ex
+  s_176a6e051212f3::t_28bd90389d856e 8,25,33,45,57,59,62,77,89,95,98,104,106-117,123,125,128,143,156,177,179,189,209,215
+  s_176a6e051212f3::t_04a7c9127229b6 1-7,9-24,26-32,34-44,46-56,58,60-61,63-76,78-88,90-94,96-97,99-103,105,118-122,124,126-127,129-142,144-155,157-176,178,180-188,190-208,210-214,216
+lib/angler/storage/janitor.ex
+  s_176a6e051212f3::t_28bd90389d856e 5-6
+  s_176a6e051212f3::t_23f6d73ff6cd4d 1-2,7,20-83,89-90,96,132
+  s_176a6e051212f3::t_131bbc8d842a23 3-4,8-19,84-88,91-95,97-131
+lib/angler/telegram/sent_tracker.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-49
+lib/angler/storage.ex
+  s_176a6e051212f3::t_b6776ccca83445 1-3,5-7,11,20,26,33,45-58,71,74-75,86-90,96,111-114,118-120,126,137-138,155-157,159-161,163-164,169,178,201-202,219,349
+  s_176a6e051212f3::t_7e6db4841adf72 36-44
+  s_176a6e051212f3::t_28bd90389d856e 4,12-17,19,29,63-68,72-73,78-82,85,91-92,101-109,121,124-125,130-133,139-154,165-168,172,179-181,185-195,199,203-215,221-318,332-334,340,343,347-348
+  s_176a6e051212f3::t_6e0d976530702f 8-10,18,21-25,27-28,30-32,34-35,59-62,69-70,76-77,83-84,93-95,97-100,110,115-117,122-123,127-129,134-136,158,162,170-171,173-177,182-184,196-198,200,216-218,220,319-331,335-339,341-342,344-346
+test/angler/telegram/receiver_test.exs
+  s_176a6e051212f3::t_3754446fa75c7f 27,31,50,54,57-279,281,298-299,307-308
+  s_176a6e051212f3::t_b16da889fb7119 1-26,28-30,32-49,51-53,55-56,280,282-297,300-306,309
+README.md
+  s_176a6e051212f3::t_7f7433fb026818 246-250,320,382-386
+  s_176a6e051212f3::t_28bd90389d856e 19-21,84,87,91,95,98-109,142,144-145,164-168,189-191,198,200,206,210-211,213,274-312,325-326,332,356-381,387-428,450,452,456,462,507-518,538
+  s_176a6e051212f3::t_1213f6a8ba61ef 22-26
+  s_176a6e051212f3::t_ace49a082716de 154-156
+  s_176a6e051212f3::t_0f8d7b8f540608 3-8,10,12-18,27-43,45-60,63-83,85-86,88-90,92-94,96-97,110-141,143,146-153,157-163,169-188,192-197,199,201-205,207-209,212,214-245,251-273,313-319,321-324,327-331,333-355,429-449,451,453-455,457-461,463-506,519-537,539-548,550
+lib/angler/media/egress_proxy/connection.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-278
+test/angler_web/controllers/error_json_test.exs
+  s_176a6e051212f3::t_6f6cae7f52d049 1-12
+test/test_helper.exs
+  s_176a6e051212f3::t_86b16fce63366c 1-3,6-8
+  s_176a6e051212f3::t_9b0c5180fe005e 4-5
+  s_176a6e051212f3::t_6f6cae7f52d049 9
+lib/angler/media.ex
+  s_176a6e051212f3::t_28bd90389d856e 9-20,29-30,41-45,68-69,71-72,76-84,86,98-99,101-121,124-129,131,135,137,141-142,146-148,150-155,157-220
+  s_176a6e051212f3::t_909851474d4e85 22-27,122-123,136,145,149,156
+  s_176a6e051212f3::t_7e6db4841adf72 56-58
+  s_176a6e051212f3::t_1f4280c0133339 28,47-48,73-75,87-97,130,133-134
+  s_176a6e051212f3::t_e20931505d46f9 1-8,21,31-40,46,49-55,59-67,70,85,100,132,138-140,143-144,221
+compose.yaml
+  s_176a6e051212f3::t_510d706aae4e22 27,31,63,65-67,92,96,128-135
+  h_cd013b08c0e792 41,53
+  s_176a6e051212f3::t_28bd90389d856e 70-77
+  s_176a6e051212f3::t_dcc27a73d9217c 24-26
+  s_176a6e051212f3::t_a968e5186b6f70 28-30
+  s_176a6e051212f3::t_77b29b924d52b8 64
+  s_176a6e051212f3::t_8d0939863afbd2 68-69
+  s_176a6e051212f3::t_81bf9eece3c9e2 78-80,89-91
+  s_176a6e051212f3::t_d1fb87f4eb69d9 93-95
+  s_176a6e051212f3::t_de2f046335c860 97-99,125-127
+  s_176a6e051212f3::t_4be632abb18cc8 136-138
+  h_cd013b08c0e792 1-23,32-40,42-52,54-62,81-88,100-124,139-144
+lib/angler/media/ytdlp/outcome.ex
+  s_176a6e051212f3::t_fb45533afe60fb 20-22,29-38,49-54,219-220
+  s_176a6e051212f3::t_28bd90389d856e 1-19,23-28,39-48,55-218,221-247
+lib/angler_web/controllers/error_json.ex
+  s_176a6e051212f3::t_6f6cae7f52d049 1-21
+lib/angler/pipeline/retry_policy.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-209
+test/angler/pipeline/upload_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-105
+  s_176a6e051212f3::t_4090a74f911254 106-263
+lib/angler/media/slideshow/plan.ex
+  s_176a6e051212f3::t_4b8570a16c0a91 1-185
+lib/angler/telegram/http.ex
+  s_176a6e051212f3::t_909851474d4e85 1-215
+lib/angler/entries/history.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-48
+lib/angler_web/components/common_components.ex
+  s_176a6e051212f3::t_909851474d4e85 1-150
+config/test.exs
+  s_176a6e051212f3::t_0dc2774b595876 38-41
+  s_176a6e051212f3::t_c8eb27425dcf42 23-30,43-47
+  s_176a6e051212f3::t_6f6cae7f52d049 1-22,48-60
+  s_176a6e051212f3::t_16b8ffc68f7f74 35-37
+  s_176a6e051212f3::t_a209d8178bb15c 31-34,42
+test/angler/runtime_config_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-191
+lib/angler/entries/queue.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-3,6-18,21-87,158,161-230
+  s_176a6e051212f3::t_909851474d4e85 4-5,19-20,88-157,159-160
+AGENTS.md
+  s_176a6e051212f3::t_6f6cae7f52d049 1-226,228-449
+  s_176a6e051212f3::t_7bb50f84a4b832 227
+test/angler_web/format_test.exs
+  s_176a6e051212f3::t_b8215f589cec8a 1-153
+test/angler/pipeline/feedback_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 1-53
+lib/angler/media/plan.ex
+  s_176a6e051212f3::t_909851474d4e85 1-165
+lib/angler/storage/cleanup.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-243
+test/support/conn_case.ex
+  s_176a6e051212f3::t_6f6cae7f52d049 1-38
+test/angler_web/live/entries_live_test.exs
+  s_176a6e051212f3::t_b8215f589cec8a 1,3-6,8,10-22,55-185,187-191,194-195,197-201,221-258,273-302
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 9,23-54,192-193,196,202-220,259-272
+  s_176a6e051212f3::t_909851474d4e85 2,7,186
+lib/angler/pipeline/db_retry.ex
+  s_176a6e051212f3::t_28bd90389d856e 1-101
+test/angler/telegram_test.exs
+  s_176a6e051212f3::t_28bd90389d856e 14,20,23,32,35,39,52,55,62,66,71,74,77,86,98,107-536,543
+  s_176a6e051212f3::t_d8faa5b6a89297 1-13,15-19,21-22,24-31,33-34,36-38,40-51,53-54,56-61,63-65,67-70,72-73,75-76,78-85,87-97,99-106,537-542,544-546
+lib/angler/media/probe/mp4.ex
+  s_176a6e051212f3::t_909851474d4e85 1-47
+test/angler/media/slideshow/commands_test.exs
+  s_176a6e051212f3::t_4b8570a16c0a91 1-223
+lib/angler/settings.ex
+  s_176a6e051212f3::t_0adc295225a6e5 1-83
+test/angler_web/components/core_components_test.exs
+  s_176a6e051212f3::t_5fab2c1c2fdc0d 153-189
+  s_176a6e051212f3::t_b8215f589cec8a 1-152,190-247
+lib/angler_web/components/entry_components.ex
+  s_176a6e051212f3::t_909851474d4e85 1-221
+test/angler/telegram/health_test.exs
+  s_176a6e051212f3::t_3754446fa75c7f 1-126
+.dockerignore
+  s_176a6e051212f3::t_f9adacc15b24ac 1-19
+Dockerfile
+  s_176a6e051212f3::t_f902e17bba08b3 1-161
+assets/vendor/heroicons.js
+  s_176a6e051212f3::t_668b28cacc1cf4 1-43
+assets/vendor/topbar.js
+  s_176a6e051212f3::t_98a34e6d2eb026 1-138
+config/test.exs.orig
+  s_176a6e051212f3::t_e6ff145bee0158 1-56
+lib/angler/media/slideshow/images.ex
+  s_176a6e051212f3::t_763c38803679f7 1-138
+lib/angler/media/slideshow/tools.ex
+  s_176a6e051212f3::t_760df611d60fdc 1-77
+lib/angler/media/tiktok.ex
+  s_176a6e051212f3::t_0998f7aecc691d 1-209
+lib/angler/media/tiktok/challenge.ex
+  s_176a6e051212f3::t_908649ece71b6e 1-94
+lib/angler/media/tiktok/page.ex
+  s_176a6e051212f3::t_795ba66e6a5c22 1-135
+lib/angler/media/tiktok/post.ex
+  s_176a6e051212f3::t_57b597cc25bdfe 1-93
+lib/angler/media/tiktok/url.ex
+  s_176a6e051212f3::t_de58a4fbbfa611 1-67
+lib/angler/pipeline/caption.ex
+  s_176a6e051212f3::t_90d1d95a6caff8 1-132
+lib/angler/release.ex
+  s_176a6e051212f3::t_25f044196d41bb 1-40
+lib/angler/telegram/config.ex
+  s_176a6e051212f3::t_19634ccc5372c6 1-25
+lib/angler/telegram/poller.ex
+  s_176a6e051212f3::t_3d67cc82c0c152 1-144
+lib/angler/telegram/receiver.ex
+  s_176a6e051212f3::t_d0f8b91563de64 1-319
+lib/angler_web/format.ex
+  s_176a6e051212f3::t_12f3550d010ca5 1-217
+mix.lock
+  s_176a6e051212f3::t_7c105fa9b41d5d 2-39,41
+priv/repo/migrations/20260926155248_add_media_kind_to_entries.exs
+  s_176a6e051212f3::t_7b7af91031d166 1-11
+priv/repo/migrations/20260927085031_add_title_captions_to_settings.exs
+  s_176a6e051212f3::t_8bf4c4814b0c70 1-10
+rel/overlays/bin/migrate
+  s_176a6e051212f3::t_3b004f0f5115a2 1-5
+rel/overlays/bin/server
+  s_176a6e051212f3::t_4b841929e5d9ed 1-5
+test/angler/media/plan_test.exs
+  s_176a6e051212f3::t_607aa6962fe050 1-250
+test/angler/media/slideshow/images_test.exs
+  s_176a6e051212f3::t_973e9bf9120a85 1-146
+test/angler/media/tiktok/challenge_test.exs
+  s_176a6e051212f3::t_7f7b55ee6ce027 1-83
+test/angler/media/tiktok_download_test.exs
+  s_176a6e051212f3::t_74d9702e166a65 1-137
+test/angler/pipeline/caption_test.exs
+  s_176a6e051212f3::t_cc24d7114f5bf3 1-156
+test/angler/release_test.exs
+  s_176a6e051212f3::t_16373d8aeefab4 1-27
+test/angler/telegram/local_mode_test.exs
+  s_176a6e051212f3::t_74e46ffde75997 1-85
+test/angler_web/controllers/media_controller_test.exs
+  s_176a6e051212f3::t_937c3d8e6dfe51 1-183
+test/angler_web/live/settings_live_test.exs.orig
+  s_176a6e051212f3::t_a1a746946944b8 1-358
+test/fixtures/media/probe_attached_pic.json
+  s_176a6e051212f3::t_a81a408a8968d3 1-53
+test/fixtures/media/probe_hevc_opus_mkv.json
+  s_176a6e051212f3::t_aec7f64258b2e4 1-39
+test/fixtures/media/probe_no_audio.json
+  s_176a6e051212f3::t_b215056c5c8c50 1-31
+test/fixtures/media/probe_portrait_rotated.json
+  s_176a6e051212f3::t_af948db1042e18 1-50
+test/fixtures/tiktok/silent_slideshow_page.html
+  s_176a6e051212f3::t_7f757838d0a9aa 1-5
+test/fixtures/tiktok/slideshow_page.html
+  s_176a6e051212f3::t_7f444b024f5bb1 1-5
+test/support/component_test_helpers.ex
+  s_176a6e051212f3::t_f5369e994d9d72 1-52
+test/support/entries_live_test_helpers.ex
+  s_176a6e051212f3::t_61884eac695c31 1-49
+test/support/tiktok_fixtures.ex
+  s_176a6e051212f3::t_301f9f5be7b5cb 1-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "42ec9b4bba4dc376aab6bf45daf266cf9864784f",
+  "prompts": {},
+  "humans": {
+    "h_cd013b08c0e792": {
+      "author": "Mykyta Burkovskyi <burkovskyi.work@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_176a6e051212f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8fe21077-a4d2-46ae-857d-9ef7caefe375",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Mykyta Burkovskyi <burkovskyi.work@gmail.com>"
+    }
+  }
+}
