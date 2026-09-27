@@ -1,0 +1,5 @@
+defmodule Angler.Repo do
+  use Ecto.Repo,
+    otp_app: :angler,
+    adapter: Ecto.Adapters.Postgres
+end

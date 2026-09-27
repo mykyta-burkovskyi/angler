@@ -1,0 +1,19 @@
+# The build context is an allowlist: only what the Dockerfile copies is sent to
+# the Docker daemon. Secrets (.env, cookies.txt), local media (data/), git
+# history and build artifacts (_build, deps, cover, tmp, .elixir_ls, .expert)
+# can never end up in the context or the image.
+*
+
+!mix.exs
+!mix.lock
+!config/
+!lib/
+!priv/
+!assets/
+!rel/
+
+# Generated inside the image; stale local copies must not leak in.
+priv/static/assets/
+priv/static/cache_manifest.json
+assets/node_modules/
+**/.DS_Store

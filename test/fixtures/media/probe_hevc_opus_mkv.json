@@ -1,0 +1,39 @@
+{
+    "programs": [
+
+    ],
+    "stream_groups": [
+
+    ],
+    "streams": [
+        {
+            "index": 0,
+            "codec_name": "hevc",
+            "profile": "Main",
+            "codec_type": "video",
+            "width": 640,
+            "height": 360,
+            "pix_fmt": "yuv420p",
+            "avg_frame_rate": "25/1",
+            "disposition": {
+                "attached_pic": 0
+            }
+        },
+        {
+            "index": 1,
+            "codec_name": "opus",
+            "codec_type": "audio",
+            "channels": 1,
+            "avg_frame_rate": "0/0",
+            "disposition": {
+                "attached_pic": 0
+            }
+        }
+    ],
+    "format": {
+        "format_name": "matroska,webm",
+        "duration": "2.008000",
+        "size": "149519",
+        "bit_rate": "595693"
+    }
+}

@@ -1,0 +1,144 @@
+# Angler: app + Postgres, plus optional services behind profiles:
+#
+#   docker compose up -d                          # app + db (polling, or your own proxy)
+#   docker compose --profile caddy up -d          # + Caddy with automatic HTTPS
+#   docker compose --profile tunnel up -d         # + Cloudflare Tunnel
+#   docker compose --profile local-bot-api up -d  # + local Telegram Bot API server (2000 MB uploads)
+#
+# Configuration lives in .env (copy .env.example); COMPOSE_PROFILES=... there
+# replaces the --profile flags. See README.md.
+#
+# Services behind a profile must not use ${VAR:?...}: that would break every
+# compose command while the profile is inactive. They use ${VAR:-} instead.
+
+name: angler
+
+services:
+  db:
+    image: postgres:18.6-trixie
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: angler
+      POSTGRES_DB: angler
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      # Postgres 18+ keeps its data in /var/lib/postgresql/18/docker; mount the parent.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      # 127.0.0.1, not the socket: the temporary server during initdb listens on the socket only.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+      start_interval: 1s
+    stop_grace_period: 60s
+
+  app:
+    build: .
+    image: ${ANGLER_IMAGE:-angler:local}
+    restart: unless-stopped
+    dns: [1.1.1.1, 8.8.8.8]
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      # Keep POSTGRES_PASSWORD URL-safe (e.g. `openssl rand -hex 24`).
+      DATABASE_URL: ecto://angler:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db/angler
+      DATA_DIR: /data
+      # The port inside the container; publish a different one with ANGLER_PORT.
+      PORT: "4000"
+    volumes:
+      - media:/data
+      - ./cookies.txt:/config/cookies.txt:ro
+    ports:
+      - "${ANGLER_BIND:-127.0.0.1}:${ANGLER_PORT:-4000}:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      telegram-bot-api:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:4000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 2s
+    # On shutdown the pipeline gives running downloads, conversions and uploads
+    # 15 s to finish, then stops its stages one by one (up to 15 s each), so a
+    # stop takes at most about 15 s x (1 + DOWNLOAD_CONCURRENCY + UPLOAD_CONCURRENCY)
+    # (75 s with the defaults). Raise this if you raise the concurrency, or Docker
+    # kills the app first. Work that did not finish starts over after the next
+    # start; an upload cut off this way may already have reached Telegram, so its
+    # video can occasionally be posted twice.
+    stop_grace_period: 120s
+
+  telegram-bot-api:
+    image: aiogram/telegram-bot-api:10.3
+    profiles: ["local-bot-api"]
+    restart: unless-stopped
+    environment:
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID:-}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:-}
+      TELEGRAM_LOCAL: "1"
+      TELEGRAM_STAT: "1"
+    volumes:
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
+      # Same path as in the app, so `file:///data/...` uploads resolve here.
+      - media:/data:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8082/"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+      start_interval: 1s
+
+  caddy:
+    image: caddy:2.11.4
+    profiles: ["caddy"]
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      ANGLER_DOMAIN: ${ANGLER_DOMAIN:-}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      # Mount the directory, not the file, so edits to the Caddyfile are picked up.
+      - ./deploy/caddy:/etc/caddy:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.3
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+      # Enables `cloudflared tunnel ready` (the image has no shell or curl).
+      TUNNEL_METRICS: 127.0.0.1:20241
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  media:
+  telegram-bot-api-data:
+  caddy_data:
+  caddy_config:

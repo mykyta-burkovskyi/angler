@@ -1,0 +1,25 @@
+# Caddy for `docker compose --profile caddy up -d`: obtains a certificate for
+# ANGLER_DOMAIN (its DNS record must point at this machine, ports 80 and 443
+# reachable) and proxies everything, including the LiveView websocket and
+# Telegram's webhook, to the app. Set ANGLER_DOMAIN and ACME_EMAIL in .env.
+#
+# That makes the whole dashboard (settings and /system included) reachable from
+# the internet, protected only by DASHBOARD_PASSWORD. To publish only Telegram's
+# webhook, uncomment the two @dashboard lines below and open the dashboard over
+# an SSH tunnel or the LAN instead (README: "Keeping the dashboard private").
+{
+	email {$ACME_EMAIL}
+}
+
+{$ANGLER_DOMAIN} {
+	encode zstd gzip
+
+	# @dashboard not path /telegram/webhook
+	# respond @dashboard 404
+
+	reverse_proxy app:4000 {
+		# Keep websockets (the live dashboard) open across `caddy reload`
+		# instead of disconnecting every browser at once.
+		stream_close_delay 5m
+	}
+}

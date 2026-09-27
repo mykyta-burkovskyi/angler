@@ -1,0 +1,145 @@
+<Layouts.app flash={@flash} active={:settings}>
+  <.header>
+    Settings
+    <:subtitle>Changes apply to new links right away.</:subtitle>
+  </.header>
+
+  <div class="grid items-start gap-6 lg:grid-cols-3">
+    <.form
+      for={@form}
+      id="settings-form"
+      phx-change="validate"
+      phx-submit="save"
+      class="rounded-xl border border-line bg-surface shadow-xs lg:col-span-2"
+    >
+      <.form_section
+        title="Storage"
+        description="Delivered videos are kept on disk for previews on this dashboard."
+      >
+        <div class="grid gap-5 sm:grid-cols-2">
+          <.input
+            field={@form[:storage_limit_mb]}
+            type="number"
+            label="Storage limit"
+            suffix="MB"
+            min="100"
+            hint={storage_hint(@form[:storage_limit_mb].value)}
+          />
+          <.input
+            field={@form[:retention_hours]}
+            type="number"
+            label="Keep videos for"
+            suffix="hours"
+            min="0"
+            hint={retention_hint(@form[:retention_hours].value)}
+          />
+          <.input
+            field={@form[:history_days]}
+            type="number"
+            label="Keep history for"
+            suffix="days"
+            min="0"
+            hint="Finished entries and their files are deleted this many days after they finished. 0 keeps them forever."
+          />
+        </div>
+      </.form_section>
+
+      <.form_section title="Limits" description="What the bot agrees to download and send.">
+        <div class="grid gap-5 sm:grid-cols-2">
+          <.input
+            field={@form[:max_source_mb]}
+            type="number"
+            label="Largest download"
+            suffix="MB"
+            min="1"
+            hint="Refused up front when the site reports the size; downloads that grow past it are stopped."
+          />
+          <.input
+            field={@form[:max_duration_minutes]}
+            type="number"
+            label="Longest video"
+            suffix="minutes"
+            min="1"
+            hint="Refused up front when the site reports the length; always checked on the downloaded file."
+          />
+        </div>
+        <.input
+          field={@form[:upload_limit_mb]}
+          type="number"
+          label="Upload size"
+          suffix="MB"
+          min="5"
+          max={@max_upload_mb}
+          placeholder={"#{@max_upload_mb}"}
+          hint={"Videos are re-encoded to fit. Leave empty for the Bot API maximum (#{@max_upload_mb} MB)."}
+        />
+      </.form_section>
+
+      <.form_section title="Filters" description="Which links and chats the bot answers.">
+        <div class="relative">
+          <.input
+            field={@form[:allowed_hosts]}
+            type="textarea"
+            label="Allowed sites"
+            rows="6"
+            value={list_text(@form[:allowed_hosts].value)}
+            placeholder="Any site"
+            hint="One host per line; subdomains are included. Leave empty to accept links to any site."
+          />
+          <button
+            type="button"
+            id="reset-hosts"
+            phx-click="reset_hosts"
+            class="absolute top-0 right-0 cursor-pointer text-xs font-medium text-brand hover:underline"
+          >
+            Reset to defaults
+          </button>
+        </div>
+        <.input
+          field={@form[:allowed_chat_ids]}
+          type="textarea"
+          label="Allowed chats"
+          rows="3"
+          value={list_text(@form[:allowed_chat_ids].value)}
+          placeholder="Any chat"
+          hint="One chat ID per line (group IDs are negative). Leave empty to answer in any chat — then anyone who finds the bot can use it, including your yt-dlp cookies."
+        />
+      </.form_section>
+
+      <.form_section title="Replies" description="How the bot talks back in chats.">
+        <.input
+          field={@form[:failure_replies]}
+          type="select"
+          label="Explain failures"
+          options={failure_reply_options()}
+          hint="Reply to the message with the reason when a link can't be delivered."
+        />
+        <.input
+          field={@form[:reactions_enabled]}
+          type="checkbox"
+          label="React to messages"
+          hint="Mark messages while a link is being processed and when it fails, where reactions are allowed."
+        />
+        <.input
+          field={@form[:title_captions]}
+          type="checkbox"
+          label="Post titles as captions"
+          hint="Send the video's title with it (trimmed to Telegram's 1024-character limit)."
+        />
+      </.form_section>
+
+      <.save_bar dirty?={@dirty?} />
+    </.form>
+
+    <div class="space-y-6">
+      <.storage_panel usage={@usage} cleaning?={@cleaning?} />
+      <.telegram_panel telegram={@telegram} registering?={@registering?} />
+      <.system_panel
+        version={@version}
+        pipeline={@pipeline}
+        tools={@tools}
+        updating_ytdlp?={@updating_ytdlp?}
+      />
+    </div>
+  </div>
+</Layouts.app>

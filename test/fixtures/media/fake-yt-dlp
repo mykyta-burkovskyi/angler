@@ -1,0 +1,132 @@
+#!/bin/sh
+# Stand-in for yt-dlp in tests. Downloads behave according to the last path segment
+# of the URL; the arguments, environment and cookies it saw are written to the home
+# directory (-P home:DIR) for assertions.
+
+dir=$(dirname "$0")
+
+case "$1" in
+  --version)
+    cat "$dir/fake-version" 2>/dev/null || echo "2026.08.19"
+    exit 0
+    ;;
+  --update-to)
+    if [ "$2" = "broken" ]; then
+      echo "Current version: stable@2026.08.19"
+      echo "ERROR: Unable to write to $0; try running as administrator"
+      exit 100
+    fi
+    echo "2026.09.20.000000" > "$dir/fake-version"
+    echo "Updated yt-dlp to $2@2026.09.20.000000"
+    exit 0
+    ;;
+esac
+
+home=""
+info=""
+url=""
+proxy=""
+
+parse() {
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -P) case "$2" in home:*) home="${2#home:}" ;; esac; shift 2 ;;
+      --print-to-file) info="$3"; shift 3 ;;
+      --proxy) proxy="$2"; shift 2 ;;
+      --) url="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+}
+
+parse "$@"
+printf '%s\n' "$@" > "$home/args.txt"
+printf 'HOME=%s\nXDG_CACHE_HOME=%s\nPWD=%s\nhttp_proxy=%s\nHTTPS_PROXY=%s\nno_proxy=%s\n' \
+  "$HOME" "$XDG_CACHE_HOME" "$(pwd -P)" "${http_proxy-unset}" "${HTTPS_PROXY-unset}" \
+  "${no_proxy-unset}" > "$home/env.txt"
+if [ -f "$home/cookies.txt" ]; then
+  cp "$home/cookies.txt" "$home/cookies-seen.txt"
+  ls -l "$home/cookies.txt" | cut -c1-10 > "$home/cookies-mode.txt"
+fi
+mkdir -p "$home/tmp"
+
+download() {
+  echo "[youtube] abc: Downloading webpage"
+  echo '[meta] {"is_live": false, "duration": 12.5}'
+  echo "[progress] downloading 1024 2048 1000.0 1"
+  echo "[progress] finished 2048 2048 1000.0 NA"
+  echo "[postprocess] started Merger"
+  printf 'fake video' > "$home/source.mp4"
+  printf '{"id": "abc", "title": "A \\"quoted\\" title", "extractor_key": "Fake", "webpage_url": "https://fake.test/ok", "duration": 12.5, "width": 1280, "height": 720, "vcodec": "%s", "acodec": "%s"}\n' "$1" "$2" >> "$info"
+  echo "[postprocess] finished MoveFiles"
+  echo "[result] \"$home/source.mp4\""
+}
+
+case "${url##*/}" in
+  ok) download avc1.64001F none; exit 0 ;;
+  max-downloads) download avc1.64001F mp4a.40.2; echo "[info] Maximum number of downloads reached"; exit 101 ;;
+  audio-only) download none mp3; exit 0 ;;
+  too-long)
+    echo '[meta] {"is_live": false, "duration": 4000}'
+    echo "[download] Fake video does not pass filter (!is_live & duration<?1800), skipping .."
+    exit 0
+    ;;
+  live)
+    echo '[meta] {"is_live": true}'
+    echo "[download] Fake live does not pass filter (!is_live & duration<?1800), skipping .."
+    exit 0
+    ;;
+  too-big)
+    echo "[download] File is larger than max-filesize (629172 bytes > 102400 bytes). Aborting."
+    exit 101
+    ;;
+  private)
+    echo "ERROR: [youtube] abc: Private video. Sign in if you've been granted access to this video" >&2
+    exit 1
+    ;;
+  hang)
+    echo "[progress] downloading 1 NA NA NA"
+    exec sleep 60
+    ;;
+  endless)
+    # A stream without a size (chunked HTTP, HLS): writes until it is stopped.
+    bytes=0
+    while :; do
+      head -c 65536 /dev/zero >> "$home/tmp/source.mp4.part"
+      bytes=$((bytes + 65536))
+      echo "[progress] downloading $bytes NA NA NA"
+      sleep 0.05
+    done
+    ;;
+  silent)
+    # Like ffmpeg downloading an HLS stream for yt-dlp: no progress lines at all.
+    while :; do
+      head -c 65536 /dev/zero >> "$home/tmp/source.mp4.part"
+      sleep 0.05
+    done
+    ;;
+  unsized)
+    # A finished download that was never compared with --max-filesize.
+    head -c 200000 /dev/zero > "$home/source.mp4"
+    echo '{"vcodec": "avc1.64001F", "acodec": "mp4a.40.2"}' >> "$info"
+    echo "[result] \"$home/source.mp4\""
+    ;;
+  no-duration)
+    # Metadata without a duration (logged-out Instagram, direct links).
+    echo '[meta] {"is_live": false, "duration": null}'
+    cp "$(dirname "$home")/fake-source.mp4" "$home/source.mp4"
+    echo '{"vcodec": "avc1.64001F", "acodec": "mp4a.40.2", "duration": null}' >> "$info"
+    echo "[result] \"$home/source.mp4\""
+    ;;
+  blocked)
+    # Requests a loopback address through the proxy, like a redirect would.
+    curl --silent --output /dev/null --write-out '%{http_code}\n' --proxy "$proxy" \
+      "http://127.0.0.1:9/video.mp4" > "$home/blocked-status.txt"
+    echo "ERROR: [generic] video: Unable to download webpage: HTTP Error 403: Forbidden" >&2
+    exit 1
+    ;;
+  *)
+    echo "ERROR: Unsupported URL: $url" >&2
+    exit 1
+    ;;
+esac

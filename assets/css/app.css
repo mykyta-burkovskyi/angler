@@ -1,0 +1,125 @@
+/* See the Tailwind configuration guide for advanced usage
+   https://tailwindcss.com/docs/configuration */
+
+@import "tailwindcss" source(none);
+@import "phoenix-colocated/angler/colocated.css";
+@source "../css";
+@source "../js";
+@source "../../lib/angler_web";
+/* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
+@source "../../_build/dev/phoenix-colocated/angler/*/";
+
+/* A Tailwind plugin that makes "hero-#{ICON}" classes available.
+   The heroicons installation itself is managed by your mix.exs */
+@plugin "../vendor/heroicons";
+
+/* Add variants based on LiveView classes */
+@custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
+@custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
+@custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
+
+/* Use the data attribute for dark mode  */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/*
+ * Design tokens. Components use these semantic colors (bg-surface, text-ink,
+ * border-line, bg-brand, text-danger, ...) instead of raw palette colors, and the
+ * dark theme below swaps their values, so most markup needs no dark: variants.
+ */
+@theme {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Surfaces, from the page background up */
+  --color-canvas: oklch(98.4% 0.003 247);
+  --color-surface: oklch(100% 0 0);
+  --color-subtle: oklch(96.7% 0.005 247);
+  --color-line: oklch(92.6% 0.007 247);
+  --color-line-strong: oklch(87% 0.011 250);
+
+  /* Text */
+  --color-ink: oklch(21.5% 0.024 262);
+  --color-ink-muted: oklch(44.5% 0.027 257);
+  /* At least 4.5:1 (WCAG AA) on canvas, surface and subtle */
+  --color-ink-faint: oklch(53% 0.024 257);
+
+  /* Brand: deep water teal */
+  --color-brand: oklch(51.5% 0.1 222);
+  --color-brand-strong: oklch(45.5% 0.095 224);
+  --color-brand-ink: oklch(99% 0.006 220);
+
+  /* Status */
+  --color-success: oklch(51% 0.125 158);
+  --color-warning: oklch(56% 0.14 58);
+  --color-danger: oklch(54% 0.195 23);
+  --color-info: oklch(53% 0.155 250);
+  --color-progress: oklch(52% 0.2 292);
+
+  --animate-indeterminate: indeterminate 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  --animate-fade-in: fade-in 0.3s ease-out both;
+
+  @keyframes indeterminate {
+    from {
+      transform: translateX(-110%);
+    }
+    to {
+      transform: translateX(260%);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(-0.25rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  [data-theme="dark"] {
+    color-scheme: dark;
+
+    --color-canvas: oklch(15.8% 0.013 257);
+    --color-surface: oklch(19.8% 0.015 257);
+    --color-subtle: oklch(23.5% 0.016 257);
+    --color-line: oklch(28.5% 0.017 257);
+    --color-line-strong: oklch(35% 0.019 257);
+
+    --color-ink: oklch(95.5% 0.006 250);
+    --color-ink-muted: oklch(76% 0.014 252);
+    --color-ink-faint: oklch(62% 0.016 254);
+
+    --color-brand: oklch(78% 0.115 208);
+    --color-brand-strong: oklch(84% 0.1 206);
+    --color-brand-ink: oklch(21% 0.035 228);
+
+    --color-success: oklch(78% 0.14 160);
+    --color-warning: oklch(82% 0.135 78);
+    --color-danger: oklch(72% 0.165 20);
+    --color-info: oklch(76% 0.12 245);
+    --color-progress: oklch(76% 0.14 296);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-brand) 25%, transparent);
+  }
+}
+
+/* Make LiveView wrapper divs transparent for layout */
+[data-phx-session], [data-phx-teleported-src] { display: contents }
+
+/* This file is for your main application CSS */

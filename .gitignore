@@ -7,7 +7,7 @@
 # The directory Mix downloads your dependencies sources to.
 /deps/
 
-# Where third-party dependencies like ExDoc output generated docs.
+# Where 3rd-party dependencies like ExDoc output generated docs.
 /doc/
 
 # Ignore .fetch files in case you like to edit your project deps locally.
@@ -19,13 +19,37 @@ erl_crash.dump
 # Also ignore archive artifacts (built via "mix archive.build").
 *.ez
 
-# Ignore package tarball (built via "mix hex.build").
-angler-*.tar
-
 # Temporary files, for example, from tests.
 /tmp/
 
-# Ignore vs code settings
-.vscode/
+# Ignore package tarball (built via "mix hex.build").
+angler-*.tar
 
+# Ignore assets that are produced by build tools.
+/priv/static/assets/
+
+# Ignore digested assets cache.
+/priv/static/cache_manifest.json
+
+# In case you use Node.js/npm, you want to ignore these.
+npm-debug.log
+/assets/node_modules/
+
+
+# Local environment / secrets
 .env
+.env.*
+!.env.example
+
+# Editor / tooling
+.DS_Store
+.vscode/
+.elixir_ls/
+.expert/
+
+# Local media storage used in development
+/data/
+
+# Deployment files that live next to compose.yaml
+/cookies.txt
+/compose.override.yaml

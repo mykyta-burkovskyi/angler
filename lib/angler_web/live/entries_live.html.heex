@@ -1,0 +1,178 @@
+<Layouts.app flash={@flash} active={:entries}>
+  <.header>
+    Entries
+    <:subtitle>Video links posted in your chats, newest first.</:subtitle>
+    <:actions>
+      <span
+        :if={@live?}
+        id="live-indicator"
+        class="inline-flex items-center gap-2 rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success ring-1 ring-success/20 ring-inset"
+      >
+        <span class="relative flex size-2">
+          <span class="absolute inline-flex size-full rounded-full bg-success opacity-60 motion-safe:animate-ping" />
+          <span class="relative inline-flex size-2 rounded-full bg-success" />
+        </span>
+        Live
+      </span>
+    </:actions>
+  </.header>
+
+  <section
+    id="overview"
+    aria-label="Overview"
+    class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6"
+  >
+    <.stat_card
+      id="stat-queued"
+      label="Queued"
+      value={Format.number(@stats.by_status.queued)}
+      icon="hero-inbox-stack"
+    >
+      Waiting for a worker
+    </.stat_card>
+    <.stat_card
+      id="stat-active"
+      label="Active"
+      value={Format.number(in_progress(@stats))}
+      icon="hero-bolt"
+      tone={:brand}
+      pulse={in_progress(@stats) > 0}
+    >
+      Downloading, processing or sending
+    </.stat_card>
+    <.stat_card
+      id="stat-delivered"
+      label="Delivered"
+      value={Format.number(@stats.delivered_24h)}
+      icon="hero-paper-airplane"
+      tone={:success}
+    >
+      In the last 24 hours
+    </.stat_card>
+    <.stat_card
+      id="stat-failed"
+      label="Failed"
+      value={Format.number(@stats.failed_24h)}
+      icon="hero-exclamation-triangle"
+      tone={:danger}
+    >
+      In the last 24 hours
+    </.stat_card>
+
+    <div
+      id="storage-card"
+      class="col-span-2 flex flex-col justify-between rounded-xl border border-line bg-surface p-4 shadow-xs"
+    >
+      <div class="mb-3 flex items-center justify-between gap-3">
+        <p class="text-xs font-medium tracking-wide text-ink-muted uppercase">Storage</p>
+        <.link
+          navigate={~p"/settings"}
+          class="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+        >
+          Limits <.icon name="hero-arrow-right-mini" class="size-3.5" />
+        </.link>
+      </div>
+      <.storage_meter id="storage-meter" usage={@usage} />
+    </div>
+  </section>
+
+  <div class="mt-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <nav
+      id="filter-tabs"
+      aria-label="Filter entries"
+      class="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0"
+    >
+      <div class="inline-flex gap-1 rounded-xl bg-subtle p-1 ring-1 ring-line">
+        <.link
+          :for={{filter, label} <- tabs()}
+          id={"filter-#{filter}"}
+          patch={entries_path(filter, @search)}
+          aria-current={@filter == filter && "page"}
+          class={[
+            "inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition",
+            "focus-visible:outline-2 focus-visible:outline-brand",
+            if(@filter == filter,
+              do: "bg-surface text-ink shadow-xs ring-1 ring-line",
+              else: "text-ink-muted hover:text-ink"
+            )
+          ]}
+        >
+          {label}
+          <span
+            data-role="count"
+            class={[
+              "rounded-full px-1.5 py-0.5 text-[11px] leading-none font-semibold tabular-nums",
+              if(@filter == filter, do: "bg-brand/10 text-brand", else: "bg-line text-ink-muted")
+            ]}
+          >
+            {Format.number(tab_count(@stats, filter))}
+          </span>
+        </.link>
+      </div>
+    </nav>
+
+    <.form
+      for={@search_form}
+      id="search-form"
+      phx-change="search"
+      phx-submit="search"
+      class="relative w-full md:w-80"
+    >
+      <.icon
+        name="hero-magnifying-glass-mini"
+        class="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-ink-faint"
+      />
+      <.input
+        field={@search_form[:q]}
+        id="search-input"
+        type="search"
+        placeholder="Search titles, links, chats, senders"
+        autocomplete="off"
+        aria-label="Search entries"
+        phx-debounce="300"
+        class="block h-9 w-full rounded-lg border border-line-strong bg-surface pr-3 pl-9 text-sm text-ink shadow-xs transition placeholder:text-ink-faint focus:border-brand focus:ring-3 focus:ring-brand/20 focus:outline-none"
+      />
+    </.form>
+  </div>
+
+  <section
+    aria-label="Entries"
+    class="mt-4 overflow-hidden rounded-xl border border-line bg-surface shadow-xs"
+  >
+    <ul
+      id="entries"
+      phx-update="stream"
+      phx-viewport-bottom={!@end_of_list? && JS.push("load-more", page_loading: true)}
+      class="divide-y divide-line"
+    >
+      <.entry_row
+        :for={{dom_id, entry} <- @streams.entries}
+        id={dom_id}
+        entry={entry}
+        progress={@progress[entry.id]}
+        thumbnail_url={thumbnail_url(entry)}
+      />
+    </ul>
+
+    <.list_empty_state :if={@rows == []} filter={@filter} search={@search} />
+
+    <div :if={@rows != [] and not @end_of_list?} class="border-t border-line p-2 text-center">
+      <.button
+        id="load-more"
+        variant="ghost"
+        size="sm"
+        phx-click={JS.push("load-more", page_loading: true)}
+      >
+        <.icon name="hero-arrow-down-mini" class="size-4" /> Load older entries
+      </.button>
+    </div>
+
+    <p
+      :if={@rows != [] and @end_of_list?}
+      id="entries-end"
+      class="border-t border-line px-4 py-3 text-center text-xs text-ink-faint"
+    >
+      That's everything.
+    </p>
+  </section>
+</Layouts.app>

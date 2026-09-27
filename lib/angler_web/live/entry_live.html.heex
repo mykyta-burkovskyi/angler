@@ -1,0 +1,47 @@
+<Layouts.app flash={@flash} active={:entries}>
+  <.link
+    navigate={~p"/"}
+    id="back-link"
+    class="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition hover:text-ink"
+  >
+    <.icon name="hero-arrow-left-mini" class="size-4" /> All entries
+  </.link>
+
+  <%= if @entry do %>
+    <div id="entry" class="mt-5 space-y-6">
+      <.entry_header entry={@entry} video_url={@video_url} thumbnail_url={@thumbnail_url} />
+
+      <.status_section entry={@entry} progress={@progress} />
+
+      <div class="grid gap-6 lg:grid-cols-3">
+        <div class="space-y-6 lg:col-span-2">
+          <.preview_panel entry={@entry} video_url={@video_url} thumbnail_url={@thumbnail_url} />
+
+          <div class="grid gap-6 md:grid-cols-2">
+            <.media_panel entry={@entry} />
+            <.processing_panel entry={@entry} />
+          </div>
+
+          <.storage_panel entry={@entry} />
+        </div>
+
+        <div class="space-y-6">
+          <.source_panel entry={@entry} />
+          <.telegram_panel entry={@entry} />
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <.empty_state
+      id="entry-not-found"
+      icon="hero-magnifying-glass"
+      title="Entry not found"
+      class="mt-10 rounded-xl border border-line bg-surface shadow-xs"
+    >
+      It may have been deleted, or the link is wrong.
+      <:actions>
+        <.button navigate={~p"/"} variant="primary">Back to entries</.button>
+      </:actions>
+    </.empty_state>
+  <% end %>
+</Layouts.app>
