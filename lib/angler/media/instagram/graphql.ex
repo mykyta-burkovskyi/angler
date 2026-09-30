@@ -29,8 +29,6 @@ defmodule Angler.Media.Instagram.GraphQL do
   @endpoint "https://www.instagram.com/api/graphql"
   @doc_id "27130156389949648"
   @query "PolarisLoggedOutDesktopWWWPostRootContentQuery"
-  @user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " <>
-                "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
 
   @typedoc "What Instagram said about a post (see the module documentation)."
   @type answer :: {:ok, map()} | {:gated, String.t() | nil} | :missing
@@ -106,15 +104,15 @@ defmodule Angler.Media.Instagram.GraphQL do
 
   defp headers(code, lsd) do
     [
-      {"user-agent", @user_agent},
+      {"user-agent", Instagram.user_agent()},
       {"accept", "*/*"},
       {"accept-language", "en-US,en;q=0.9"},
       {"origin", "https://www.instagram.com"},
       {"referer", Url.canonical(code)},
       {"x-fb-lsd", lsd},
       {"x-fb-friendly-name", @query},
-      {"x-ig-app-id", "936619743392459"},
-      {"x-asbd-id", "359341"},
+      {"x-ig-app-id", Instagram.app_id()},
+      {"x-asbd-id", Instagram.asbd_id()},
       {"x-ig-www-claim", "0"},
       {"x-requested-with", "XMLHttpRequest"},
       {"sec-fetch-site", "same-origin"},

@@ -1,8 +1,9 @@
 defmodule Angler.Media do
   @moduledoc """
   Turns a link into Telegram-ready media using yt-dlp, ffprobe and ffmpeg: a video
-  (also a TikTok photo slideshow rendered as one), or the photos and videos of an
-  Instagram post as an album.
+  (also a photo slideshow rendered as one: a TikTok photo post, or an Instagram
+  photo post with music), or the photos and videos of an Instagram post as an
+  album.
 
   The pipeline calls the implementation configured as
   `config :angler, Angler.Pipeline, media: module` (defaults to this module), so tests
@@ -13,8 +14,9 @@ defmodule Angler.Media do
     * `:data_dir` - persistent data directory; yt-dlp and deno cache under `cache/`,
       the self-updating yt-dlp copy lives in `bin/`
     * `:ytdlp_path`, `:ffmpeg_path`, `:ffprobe_path` - executables (paths or names in `PATH`)
-    * `:cookies_file` - optional Netscape cookies file passed to yt-dlp, and used as
-      a logged-in fallback for TikTok post pages (see `Angler.Media.Cookies`)
+    * `:cookies_file` - optional Netscape cookies file passed to yt-dlp, used as a
+      logged-in fallback for TikTok post pages, and to read the music of Instagram
+      photo posts (see `Angler.Media.Cookies`)
     * `:ytdlp_update_channel` - `nil`, `"stable"` or `"nightly"`, see `Angler.Media.Updater`
     * `:allow_private_networks` - let downloads reach loopback and private network
       addresses (default `false`), see `Angler.Media.EgressProxy`
@@ -75,11 +77,12 @@ defmodule Angler.Media do
 
   @doc """
   Downloads the media behind `url`, see `c:download/3` and `Angler.Media.Route`:
-  Instagram posts with photos or several items are albums
-  (`Angler.Media.Album.download/3`), TikTok photo posts slideshows
-  (`Angler.Media.Slideshow.download/3`), and everything else goes to yt-dlp
-  (`Angler.Media.Ytdlp.download/3`), with the canonical URL of a TikTok video and
-  the post text of an Instagram video as its title.
+  Instagram photo posts with music are slideshows
+  (`Angler.Media.Slideshow.download_instagram/4`), other Instagram posts with
+  photos or several items albums (`Angler.Media.Album.download/3`), TikTok photo
+  posts slideshows (`Angler.Media.Slideshow.download/3`), and everything else
+  goes to yt-dlp (`Angler.Media.Ytdlp.download/3`), with the canonical URL of a
+  TikTok video and the post text of an Instagram video as its title.
 
   yt-dlp refuses videos longer than `:max_duration` only when the site reports the
   duration, and what it reports can be wrong. So when there is a limit, the

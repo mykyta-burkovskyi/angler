@@ -1,8 +1,9 @@
 defmodule Angler.Media.Fetch do
   @moduledoc """
-  Streams a file from a CDN (TikTok slideshows, Instagram albums) to disk with a
-  size limit and an overall deadline (Req's receive timeout only bounds the wait
-  for each chunk). Media URLs need no user agent, referer or cookies.
+  Streams a file from a CDN (TikTok slideshows, Instagram albums and songs) to
+  disk with a size limit and an overall deadline (Req's receive timeout only
+  bounds the wait for each chunk). Media URLs need no user agent, referer or
+  cookies.
 
   Several fetches running at once can share a byte budget (the `:budget` option
   of `to_file/3`): it is counted as the bytes arrive, so parallel downloads can't

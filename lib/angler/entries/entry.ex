@@ -77,8 +77,9 @@ defmodule Angler.Entries.Entry do
     field :source_bytes, :integer
     field :output_bytes, :integer
     field :transcoded, :boolean, default: false
-    # :slideshow for TikTok photo posts assembled into a video (Angler.Media.Slideshow),
-    # :album for posts sent as their photos and videos (media_items)
+    # :slideshow for TikTok photo posts and Instagram photo posts with music,
+    # assembled into a video (Angler.Media.Slideshow); :album for posts sent as their
+    # photos and videos (media_items)
     field :media_kind, Ecto.Enum, values: [:video, :slideshow, :album]
     # An album's items in display order, see Angler.Entries.MediaItem; [] otherwise
     embeds_many :media_items, MediaItem, on_replace: :delete

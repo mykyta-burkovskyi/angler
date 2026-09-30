@@ -245,7 +245,7 @@ defmodule Angler.Media.Instagram.PostTest do
     end
   end
 
-  test "album?/1 and title/1" do
+  test "album?/1, photos?/1 and title/1" do
     photo = %{
       type: :photo,
       urls: ["https://cdn.test/p.jpg"],
@@ -259,6 +259,12 @@ defmodule Angler.Media.Instagram.PostTest do
     assert Post.album?(%Post{items: [photo]})
     assert Post.album?(%Post{items: [video, video]})
     refute Post.album?(%Post{items: [video]})
+
+    assert Post.photos?(%Post{items: [photo]})
+    assert Post.photos?(%Post{items: [photo, photo, photo]})
+    refute Post.photos?(%Post{items: [photo, video]})
+    refute Post.photos?(%Post{items: [video]})
+    refute Post.photos?(%Post{items: []})
 
     assert Post.title(%Post{caption: "Text", username: "someone"}) == "Text"
     assert Post.title(%Post{username: "someone"}) == "Post by @someone"

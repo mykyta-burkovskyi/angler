@@ -7,22 +7,24 @@ defmodule Angler.Media.Album do
   `<dir>/album/NN/` (`source.jpg` or `source.mp4`) and returns a
   `%Angler.Media.Download{kind: :album}`; `prepare/3` checks the photos and makes
   the videos Telegram-ready (`Angler.Media.Album.Prepare`), laying the files out
-  as `Angler.Storage.Album` expects them.
+  as `Angler.Storage.Album` expects them. A photo post with music is downloaded
+  with `download/3` too (`Angler.Media.Slideshow.Instagram`), and sent as that
+  album when its music can't be used.
 
-  Items come from Instagram's CDN only (`cdn?/1`: https on `*.cdninstagram.com` or
-  `*.fbcdn.net`), without cookies and without following redirects. Each item has
-  one or more versions (the original, then a smaller one), tried in order. The
-  URLs are signed and expire, so a CDN refusing an item fails the download with
-  `:transient` (the next attempt loads the post again), unless this is the final
-  attempt: then the item is left out (see `Angler.Media.Fetch.failure/3`). So is a
-  URL on another host, which is logged by its host only (signed URLs never go to
-  the logs).
+  Items come from Instagram's CDN only (`Angler.Media.Instagram.Cdn`: https on
+  `*.cdninstagram.com` or `*.fbcdn.net`), without cookies and without following
+  redirects. Each item has one or more versions (the original, then a smaller
+  one), tried in order. The URLs are signed and expire, so a CDN refusing an item
+  fails the download with `:transient` (the next attempt loads the post again),
+  unless this is the final attempt: then the item is left out (see
+  `Angler.Media.Fetch.failure/3`). So is a URL on another host, which is logged
+  by its host only (signed URLs never go to the logs).
   """
   require Logger
 
-  alias Angler.Media.{Download, Error, Fetch, Instagram}
+  alias Angler.Media.{Download, Error, Fetch}
   alias Angler.Media.Album.Prepare
-  alias Angler.Media.Instagram.Post
+  alias Angler.Media.Instagram.{Cdn, Post}
 
   @max_items 20
   @concurrency 4
@@ -31,7 +33,6 @@ defmodule Angler.Media.Album do
   @max_video_bytes 300_000_000
   @photo_timeout :timer.minutes(2)
   @video_timeout :timer.minutes(10)
-  @cdn_domains ["cdninstagram.com", "fbcdn.net"]
   @noun "Instagram post"
 
   @doc """
@@ -82,25 +83,6 @@ defmodule Angler.Media.Album do
   @spec prepare(Download.t(), Path.t(), keyword()) ::
           {:ok, Angler.Media.Output.t()} | {:error, Error.t()}
   defdelegate prepare(download, dir, opts), to: Prepare, as: :run
-
-  @doc """
-  Whether `url` may be downloaded: https (port 443) on Instagram's CDN hosts
-  (`cdninstagram.com`, `fbcdn.net` and their subdomains), without user info.
-  """
-  @spec cdn?(term()) :: boolean()
-  def cdn?(url) when is_binary(url) do
-    case URI.parse(url) do
-      %URI{scheme: "https", userinfo: nil, host: host, port: port}
-      when is_binary(host) and port in [nil, 443] ->
-        host = String.downcase(host)
-        Enum.any?(@cdn_domains, &(host == &1 or String.ends_with?(host, "." <> &1)))
-
-      _other ->
-        false
-    end
-  end
-
-  def cdn?(_url), do: false
 
   defp make_dir(album) do
     case File.mkdir_p(album) do
@@ -160,7 +142,7 @@ defmodule Angler.Media.Album do
     with :ok <- make_dir(item_dir) do
       item.urls
       |> Enum.reduce_while([], fn url, failures ->
-        case fetch(url, path, max_bytes: max_bytes, timeout: timeout, budget: job.budget) do
+        case Cdn.fetch(url, path, max_bytes: max_bytes, timeout: timeout, budget: job.budget) do
           {:ok, size} -> {:halt, {:ok, downloaded(item, path, size)}}
           {:error, :over_budget} -> {:halt, {:error, Fetch.over_budget(limit(job), @noun)}}
           {:error, {:write, _posix} = reason} -> {:halt, {:error, Fetch.write_error(reason)}}
@@ -186,25 +168,6 @@ defmodule Angler.Media.Album do
     do: {"source.mp4", min(limit, @max_video_bytes), @video_timeout}
 
   defp limit(%{budget: {_counter, limit}}), do: limit
-
-  # No cookies and no redirects; Req's own time limit backs up Fetch's deadline.
-  defp fetch(url, path, opts) do
-    if cdn?(url) do
-      timeout = Keyword.fetch!(opts, :timeout)
-
-      request = fn options ->
-        options
-        |> Keyword.merge(redirect: false, request_timeout: timeout + 5_000)
-        |> Instagram.request()
-      end
-
-      Fetch.to_file(url, path, Keyword.put(opts, :request, request))
-    else
-      host = URI.parse(url).host
-      Logger.warning("Not downloading Instagram media from #{host || "a URL without a host"}")
-      {:error, {:host_not_allowed, host}}
-    end
-  end
 
   defp downloaded(item, path, size) do
     %{

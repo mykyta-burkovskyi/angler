@@ -1,8 +1,9 @@
 defmodule Angler.Media.Instagram do
   @moduledoc """
   Reads Instagram posts before yt-dlp sees a link, so that photos and carousels
-  can be sent as they are (an album, `Angler.Media.Instagram.Post`): yt-dlp only
-  downloads a post's videos, and only the first one of a carousel.
+  can be sent as they are (an album, `Angler.Media.Instagram.Post`), or as a
+  slideshow video when a photo post has music: yt-dlp only downloads a post's
+  videos, and only the first one of a carousel.
 
   For a post link (`/p/`, `/reel/`, `/tv/` and `/share/` links, see
   `Angler.Media.Instagram.Url`) `route/3`:
@@ -16,16 +17,20 @@ defmodule Angler.Media.Instagram do
     3. falls back to yt-dlp's metadata of the post (`Angler.Media.Ytdlp.metadata/3`)
        when both gave up, and when Instagram hides the post from logged-out
        visitors or rate limits them but a cookies file is configured: yt-dlp gets
-       the cookies, so this is where they are used. Without cookies such posts
-       fail at once (hidden: `:unavailable`, rate limited: `:transient`)
-    4. classifies the post: one with photos or several items is an album, a
-       single video (a reel) goes to yt-dlp with the post text as its title
+       the cookies, so this is where they help read a post. Without cookies such
+       posts fail at once (hidden: `:unavailable`, rate limited: `:transient`)
+    4. classifies the post: a single video (a reel) goes to yt-dlp with the post
+       text as its title; a post with a video among several items is an album; a
+       photo post (one photo, or photos only) is a slideshow when a cookies file
+       is configured and Instagram's logged-in media info gives it unmuted music
+       (`Angler.Media.Instagram.Soundtrack`), otherwise an album
 
   There is no blind yt-dlp download of a link the resolver could not read: it
   would deliver a carousel as its first video.
 
-  Cookies are never sent with this module's own requests, which also never
-  follow redirects (see `request/1`).
+  Cookies are never sent with this module's own requests, except the music
+  lookup of photo posts (`Angler.Media.Instagram.MediaInfo`), and no request
+  follows redirects (see `request/1`).
 
   Configuration (`config :angler, Angler.Media.Instagram`): `:req_options` (extra
   `Req` options for every request to Instagram and its CDN; tests use
@@ -35,12 +40,17 @@ defmodule Angler.Media.Instagram do
   require Logger
 
   alias Angler.Media.{Cookies, Error, Ytdlp}
-  alias Angler.Media.Instagram.{GraphQL, Page, Post, Url}
+  alias Angler.Media.Instagram.{GraphQL, Music, Page, Post, Soundtrack, Url}
 
   @timeout 15_000
   @request_timeout 30_000
   @retry_delays [1_000, 2_000]
   @share_user_agent "curl/8.7.1"
+  # The browser and web app the requests to www.instagram.com pass for.
+  @user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " <>
+                "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+  @app_id "936619743392459"
+  @asbd_id "359341"
 
   @expired_message "This Instagram link has expired or is invalid"
   @hidden_message "This Instagram post is private, deleted or age-restricted"
@@ -49,6 +59,7 @@ defmodule Angler.Media.Instagram do
   @type route ::
           :not_instagram
           | {:album, Post.t()}
+          | {:slideshow, Post.t(), Music.t()}
           | {:ytdlp, String.t(), %{title: String.t() | nil}}
           | {:error, Error.t()}
 
@@ -56,23 +67,39 @@ defmodule Angler.Media.Instagram do
   Decides how `Angler.Media.download/3` gets `url`, see the module documentation:
 
     * `:not_instagram` - not an Instagram post link; nothing was requested
-    * `{:album, post}` - a post with photos or several items
+    * `{:album, post}` - a post with a video among several items, or a photo post
+      without (usable) music
+    * `{:slideshow, post, music}` - a photo post with music (one photo, or photos
+      only): its photos as a video playing the post's clip of the song
     * `{:ytdlp, url, %{title: text}}` - a single video: the canonical post URL for
       yt-dlp, and the post text (or nil)
     * `{:error, error}` - `:unavailable` for expired share links and hidden posts
-      (without cookies), `:transient` when Instagram could not be read (yet)
+      (without cookies), `:transient` when Instagram could not be read (yet),
+      also when the music of a photo post could not be looked up
 
   `dir` is the entry directory yt-dlp's metadata run uses. Options:
   `:final_attempt` (default true): unless set, a post yt-dlp found nothing in is
-  retried (`:transient`) instead of failing as `:unavailable`.
+  retried (`:transient`) instead of failing as `:unavailable`, and so is a photo
+  post whose music lookup could not reach Instagram (instead of an album).
   """
   @spec route(String.t(), Path.t(), keyword()) :: route()
   def route(url, dir, opts \\ []) do
     with {:ok, code} <- locate(url),
          {:ok, post} <- lookup(code, dir, opts) do
-      if Post.album?(post),
-        do: {:album, post},
-        else: {:ytdlp, Url.canonical(code), %{title: post.caption}}
+      cond do
+        not Post.album?(post) -> {:ytdlp, Url.canonical(code), %{title: post.caption}}
+        Post.photos?(post) -> photos(post, opts)
+        # The videos among the items keep their own sound: no music lookup.
+        true -> {:album, post}
+      end
+    end
+  end
+
+  defp photos(post, opts) do
+    case Soundtrack.find(post, opts) do
+      {:ok, music} -> {:slideshow, post, music}
+      :none -> {:album, post}
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -97,6 +124,22 @@ defmodule Angler.Media.Instagram do
     # Last, so neither `options` nor the configuration can turn redirects back on.
     |> Req.merge(redirect: false)
   end
+
+  @doc """
+  The browser user agent every request to `www.instagram.com` sends (the post
+  page, GraphQL and the media info API), except share links, which are resolved
+  like a command-line client.
+  """
+  @spec user_agent() :: String.t()
+  def user_agent, do: @user_agent
+
+  @doc "The website's app id, the `x-ig-app-id` header of its API requests (GraphQL, media info)."
+  @spec app_id() :: String.t()
+  def app_id, do: @app_id
+
+  @doc "The `x-asbd-id` header value of the website's API requests (GraphQL, media info)."
+  @spec asbd_id() :: String.t()
+  def asbd_id, do: @asbd_id
 
   defp config(key, default) do
     :angler |> Application.get_env(__MODULE__, []) |> Keyword.get(key, default)

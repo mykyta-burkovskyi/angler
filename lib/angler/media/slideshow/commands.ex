@@ -13,8 +13,11 @@ defmodule Angler.Media.Slideshow.Commands do
   `option framerate` line gives every image a 1/30 time base, so cuts land exactly
   on the planned frames. The RGB to BT.709 conversion runs once per image and `fps`
   duplicates frames by reference.
+
+  A post's clip of a longer song is cut into a FLAC file of its own first
+  (`clip_args/3`), so the encode can loop it like any other sound.
   """
-  alias Angler.Media.Slideshow.Plan
+  alias Angler.Media.Slideshow.{Clip, Plan}
 
   @base ~w(-hide_banner -nostdin -loglevel error -y)
   @fill_tolerance 0.02
@@ -162,6 +165,33 @@ defmodule Angler.Media.Slideshow.Commands do
       if fade, do: ",afade=t=out:st=#{number(duration - fade)}:d=#{number(fade)}", else: ""
 
     "[1:a:0]asetpts=N/SR/TB,atrim=end=#{number(duration)}" <> fade_out <> "[a]"
+  end
+
+  @doc """
+  ffmpeg arguments cutting the window `cut` out of the song at `input` into a
+  16-bit FLAC file at `output`, faded out over `cut.fade` seconds when set.
+
+  The song is decoded from its start and trimmed on sample-count timestamps, which
+  is sample exact whatever the container's timestamps or an MP3 seek table say (an
+  input `-ss` is approximate for VBR MP3; a stream copy cuts on packet boundaries
+  and clicks where the clip loops). The second `asetpts` makes the fade's start
+  relative to the clip. `asetnsamples` hands the encoder frames of 4096 samples:
+  ffmpeg opens the FLAC encoder with the first frame's sample count as its block
+  size, and after `atrim` that frame is the rest of a decoded frame, which can be
+  a few samples long (under 16 fails the cut, a few hundred bloat the file).
+  """
+  @spec clip_args(Path.t(), Clip.cut(), Path.t()) :: [String.t()]
+  def clip_args(input, %{start: start, stop: stop, fade: fade}, output) do
+    fade_out =
+      if fade, do: ",afade=t=out:st=#{number(stop - start - fade)}:d=#{number(fade)}", else: ""
+
+    filter =
+      "asetpts=N/SR/TB,atrim=start=#{number(start)}:end=#{number(stop)},asetpts=N/SR/TB" <>
+        fade_out <> ",asetnsamples=n=4096:p=0"
+
+    @base ++
+      ["-i", input, "-map", "0:a:0", "-af", filter] ++
+      ~w(-c:a flac -sample_fmt s16 -map_metadata -1 -f flac) ++ [output]
   end
 
   @doc "ffmpeg arguments for a JPEG thumbnail (at most 320x320) of a canvas PNG."

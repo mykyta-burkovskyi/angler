@@ -199,6 +199,46 @@ defmodule Angler.Media.Slideshow.CommandsTest do
              "[1:a:0]asetpts=N/SR/TB,atrim=end=16.333333[a]"
   end
 
+  describe "clip_args/3" do
+    test "cuts the window on sample-count timestamps into FLAC and fades it out" do
+      args =
+        Commands.clip_args(
+          "/e/album/sound/audio.m4a",
+          %{start: 1.5, stop: 91.5, fade: 1.0},
+          "/e/album/sound/clip.flac"
+        )
+
+      assert args ==
+               ~w(-hide_banner -nostdin -loglevel error -y -i /e/album/sound/audio.m4a) ++
+                 ~w(-map 0:a:0 -af) ++
+                 [
+                   "asetpts=N/SR/TB,atrim=start=1.5:end=91.5,asetpts=N/SR/TB," <>
+                     "afade=t=out:st=89:d=1,asetnsamples=n=4096:p=0"
+                 ] ++
+                 ~w(-c:a flac -sample_fmt s16 -map_metadata -1 -f flac /e/album/sound/clip.flac)
+
+      # never a seek on the input: it would not survive -stream_loop
+      refute "-ss" in args
+    end
+
+    test "leaves out the fade for a clip that ends the song" do
+      args =
+        Commands.clip_args("/s/audio.mp3", %{start: 30.0, stop: 60.0, fade: nil}, "/s/c.flac")
+
+      assert value_after(args, "-af") ==
+               "asetpts=N/SR/TB,atrim=start=30:end=60,asetpts=N/SR/TB,asetnsamples=n=4096:p=0"
+    end
+
+    test "starts at 0 and formats fractions like the other filters" do
+      args =
+        Commands.clip_args("/s/audio.m4a", %{start: 0.0, stop: 2.5, fade: 0.625}, "/s/c.flac")
+
+      assert value_after(args, "-af") ==
+               "asetpts=N/SR/TB,atrim=start=0:end=2.5,asetpts=N/SR/TB," <>
+                 "afade=t=out:st=1.875:d=0.625,asetnsamples=n=4096:p=0"
+    end
+  end
+
   test "thumbnail_args/3 scales the first canvas to at most 320 px" do
     args = Commands.thumbnail_args("/w/canvas-001.png", "/e/thumbnail.jpg", 4)
 

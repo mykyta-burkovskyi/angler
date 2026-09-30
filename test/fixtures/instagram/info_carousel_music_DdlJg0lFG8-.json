@@ -1,0 +1,130 @@
+{
+  "status": "ok",
+  "num_results": 1,
+  "more_available": false,
+  "auto_load_more_enabled": false,
+  "items": [
+    {
+      "pk": "3991638482632339262",
+      "id": "3991638482632339262_8134971364",
+      "code": "DdlJg0lFG8-",
+      "media_type": 8,
+      "product_type": "carousel_container",
+      "carousel_media_count": 3,
+      "caption": {
+        "text": "🎧"
+      },
+      "user": {
+        "username": "zacharylaid",
+        "full_name": "Zachary Laid"
+      },
+      "carousel_media": [
+        {
+          "pk": "3991528161204810069",
+          "id": "3991528161204810069_8134971364",
+          "media_type": 1,
+          "original_width": 1808,
+          "original_height": 2256,
+          "music_metadata": null,
+          "image_versions2": {
+            "candidates": [
+              {
+                "width": 1808,
+                "height": 2256,
+                "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_1.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+              },
+              {
+                "width": 1080,
+                "height": 1348,
+                "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_1_1080.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+              }
+            ]
+          }
+        },
+        {
+          "pk": "3991528161204814656",
+          "id": "3991528161204814656_8134971364",
+          "media_type": 1,
+          "original_width": 1792,
+          "original_height": 2240,
+          "music_metadata": null,
+          "image_versions2": {
+            "candidates": [
+              {
+                "width": 1792,
+                "height": 2240,
+                "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_2.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+              },
+              {
+                "width": 1080,
+                "height": 1350,
+                "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_2_1080.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+              }
+            ]
+          }
+        },
+        {
+          "pk": "3991528161297049512",
+          "id": "3991528161297049512_8134971364",
+          "media_type": 1,
+          "original_width": 1792,
+          "original_height": 2240,
+          "music_metadata": null,
+          "image_versions2": {
+            "candidates": [
+              {
+                "width": 1792,
+                "height": 2240,
+                "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_3.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+              },
+              {
+                "width": 1080,
+                "height": 1350,
+                "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_3_1080.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+              }
+            ]
+          }
+        }
+      ],
+      "music_metadata": {
+        "audio_type": "licensed_music",
+        "music_canonical_id": "18449779159110476",
+        "pinned_media_ids": [],
+        "original_sound_info": null,
+        "music_info": {
+          "music_canonical_id": "18449779159110476",
+          "music_asset_info": {
+            "id": "2163538184479393",
+            "audio_asset_id": "2163538184479393",
+            "title": "Solace",
+            "display_artist": "Txmy",
+            "duration_in_ms": 140586,
+            "highlight_start_times_in_ms": [
+              20050,
+              35000,
+              1500
+            ],
+            "dash_manifest": null,
+            "progressive_download_url": "https://scontent-iev1-1.xx.fbcdn.net/o1/v/t2/f2/m69/song.mp4?efg=x&oh=00_sig&oe=6AC1D6AC",
+            "fast_start_progressive_download_url": "https://scontent-iev1-1.xx.fbcdn.net/o1/v/t2/f2/m69/song.mp4?efg=x&oh=00_sig&oe=6AC1D6AC",
+            "web_30s_preview_download_url": "https://scontent-iev1-1.xx.fbcdn.net/o1/v/t2/f2/m69/preview.mp4?efg=x&oh=00_sig&oe=6AC1D6AC"
+          },
+          "music_consumption_info": {
+            "audio_asset_start_time_in_ms": 1500,
+            "derived_content_start_time_in_composition_in_ms": 0,
+            "overlap_duration_in_ms": 90000,
+            "should_mute_audio": false,
+            "should_mute_audio_reason": "",
+            "should_mute_audio_reason_type": null,
+            "audio_muting_info": {
+              "mute_audio": false,
+              "mute_reason_str": "",
+              "allow_audio_editing": false,
+              "show_muted_audio_toast": false
+            }
+          }
+        }
+      }
+    }
+  ]
+}

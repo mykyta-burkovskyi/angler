@@ -289,33 +289,4 @@ defmodule Angler.Media.AlbumTest do
       assert List.last(items).path == Path.join([dir, "album", "20", "source.jpg"])
     end
   end
-
-  test "cdn?/1 accepts https URLs on Instagram's CDN hosts only" do
-    for url <- [
-          "https://scontent-iev1-1.cdninstagram.com/v/t51/1.jpg?oh=x",
-          "https://SCONTENT.CDNINSTAGRAM.COM/v/1.jpg",
-          "https://cdninstagram.com/1.jpg",
-          "https://video.fiev1-1.fna.fbcdn.net/o1/v/t2/1.mp4",
-          "https://scontent.cdninstagram.com:443/1.jpg"
-        ] do
-      assert Album.cdn?(url), url
-    end
-
-    for url <- [
-          "http://scontent.cdninstagram.com/1.jpg",
-          "https://user:pass@scontent.cdninstagram.com/1.jpg",
-          "https://scontent.cdninstagram.com:8443/1.jpg",
-          "https://evilcdninstagram.com/1.jpg",
-          "https://cdninstagram.com.evil.test/1.jpg",
-          "https://fbcdn.net.evil.test/1.jpg",
-          "https://127.0.0.1/1.jpg",
-          "file:///etc/passwd",
-          "not a url",
-          ""
-        ] do
-      refute Album.cdn?(url), url
-    end
-
-    refute Album.cdn?(nil)
-  end
 end

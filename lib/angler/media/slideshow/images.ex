@@ -36,7 +36,7 @@ defmodule Angler.Media.Slideshow.Images do
         {:cont, [image | images]}
 
       {:ok, {path, {:skip, reason}}}, images ->
-        Logger.warning("Skipping slideshow image #{Path.basename(path)}: #{reason}")
+        Logger.warning("Skipping slideshow image #{name(path)}: #{reason}")
         {:cont, images}
 
       {:ok, {_path, {:error, error}}}, _images ->
@@ -47,6 +47,13 @@ defmodule Angler.Media.Slideshow.Images do
       images -> {:ok, Enum.reverse(images)}
     end
   end
+
+  @doc """
+  An image's name for logs: the last two segments of its path (`slides/03.jpg`,
+  or `03/source.jpg` for an Instagram post, whose images are all `source.jpg`).
+  """
+  @spec name(Path.t()) :: String.t()
+  def name(path), do: path |> Path.split() |> Enum.take(-2) |> Path.join()
 
   @doc "How many ffmpeg/ffprobe runs a slideshow step starts at once."
   @spec concurrency() :: pos_integer()

@@ -11,7 +11,8 @@ defmodule Angler.Media.Slideshow.Render do
        trimmed, H.264 (CRF with a VBV cap from the size budget) and AAC, fast start
     5. if the file exceeds the upload limit, repeat 3-4 on the 720 canvas presets
        with CRF 22; still too large fails with `:too_large`
-    6. a thumbnail from the first canvas; the `slides` directory is deleted
+    6. a thumbnail from the first canvas; the work directory (the download's
+       `:path`: `slides`, or `album` for an Instagram post) is deleted
 
   Commands are built by `Angler.Media.Slideshow.Commands`. Slides change with hard
   cuts. A crossfade would be possible without per-transition memory growth (unlike
@@ -136,9 +137,7 @@ defmodule Angler.Media.Slideshow.Render do
           {:cont, {[{image, png} | rendered], done + 1}}
 
         {:failed, error} ->
-          Logger.warning(
-            "Skipping slideshow image #{Path.basename(image.path)}: #{error.message}"
-          )
+          Logger.warning("Skipping slideshow image #{Images.name(image.path)}: #{error.message}")
 
           {:cont, {rendered, done + 1}}
 
@@ -224,8 +223,8 @@ defmodule Angler.Media.Slideshow.Render do
     end
   end
 
-  # The slides directory holds the downloads and canvases (about 1.5 MB per 1080p
-  # canvas); it always lies inside the entry directory.
+  # The work directory (`slides` or `album`) holds the downloads and canvases (about
+  # 1.5 MB per 1080p canvas); it always lies inside the entry directory.
   defp remove_work_dir(work, dir) do
     if Path.dirname(work) == Path.expand(dir), do: File.rm_rf(work)
   end

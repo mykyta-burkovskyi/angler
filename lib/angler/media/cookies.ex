@@ -3,8 +3,9 @@ defmodule Angler.Media.Cookies do
   The cookies file (`YTDLP_COOKIES_FILE`, the Netscape format yt-dlp and browser
   extensions write) for the app's own requests that use it: TikTok post pages load
   once more with it when TikTok hides a post from logged-out visitors
-  (`Angler.Media.TikTok.Page`). yt-dlp gets its own copy of the file
-  (`Angler.Media.Ytdlp`), which is how Instagram lookups use it.
+  (`Angler.Media.TikTok.Page`), and the music of Instagram photo posts is read
+  with it (`Angler.Media.Instagram.MediaInfo`). yt-dlp gets its own copy of the
+  file (`Angler.Media.Ytdlp`), which is how other Instagram lookups use it.
 
   The file is read on every use (`load/0`), so a replaced file takes effect without
   a restart. Lines are 7 tab-separated fields: `domain include_subdomains path

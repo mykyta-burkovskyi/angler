@@ -12,7 +12,9 @@ defmodule Angler.Media.Instagram.Post do
     * `:webpage_url` - the post's canonical URL
 
   Built from Instagram's own post data (`from_media/1`: the GraphQL answer or the
-  post page) or from yt-dlp's metadata of the post (`from_ytdlp/1`).
+  post page) or from yt-dlp's metadata of the post (`from_ytdlp/1`). A post's
+  music is not part of it: logged out, Instagram leaves it out, and
+  `Angler.Media.Instagram.Music` reads it from the logged-in media info.
   """
 
   alias Angler.Media.Error
@@ -215,10 +217,21 @@ defmodule Angler.Media.Instagram.Post do
   defp item(urls, type, width, height, duration),
     do: %{type: type, urls: urls, width: width, height: height, duration: duration}
 
-  @doc "Whether the post is sent as photos (an album): it has a photo or several items."
+  @doc """
+  Whether the post is read item by item rather than by yt-dlp: it has a photo or
+  several items (an album, or a slideshow for a photo post with music).
+  """
   @spec album?(t()) :: boolean()
   def album?(%__MODULE__{items: items}),
     do: length(items) > 1 or Enum.any?(items, &(&1.type == :photo))
+
+  @doc """
+  Whether every item is a photo: a single photo or a carousel of photos only
+  (such a post becomes a slideshow when it has music, see `Angler.Media.Instagram`).
+  """
+  @spec photos?(t()) :: boolean()
+  def photos?(%__MODULE__{items: [_ | _] = items}), do: Enum.all?(items, &(&1.type == :photo))
+  def photos?(%__MODULE__{}), do: false
 
   @doc ~S'The post text, else "Post by @<username>", else "Instagram post".'
   @spec title(t()) :: String.t()

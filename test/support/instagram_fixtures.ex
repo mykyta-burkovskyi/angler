@@ -19,6 +19,8 @@ defmodule Angler.InstagramFixtures do
       `ytdlp_carousel_3photos_DdwalmrkTSK.jsonl`, `ytdlp_photo_Ddwoj5kBk9X.jsonl`
 
   `photo/1`, `video/1`, `post/2` and `graphql_answer/1` build answers of any shape.
+  The logged-in media info and the music of photo posts are in
+  `Angler.InstagramMusicFixtures`.
   """
 
   alias Angler.Media.Instagram.Url

@@ -1,25 +1,29 @@
 defmodule Angler.Media.Slideshow do
   @moduledoc """
-  TikTok photo posts (an image carousel with a sound) as videos.
+  Photo posts with a sound as videos: TikTok photo posts (`download/3`, an image
+  carousel with a sound) and Instagram photo posts with music
+  (`download_instagram/4`, see `Angler.Media.Slideshow.Instagram`). Both give a
+  `%Angler.Media.Download{kind: :slideshow}`, which `prepare/3` assembles into an
+  MP4 (`Angler.Media.Slideshow.Render`).
 
-  `download/3` fetches the images, in display order, and the sound of a post
-  found by `Angler.Media.TikTok` into `<dir>/slides/` (`01.jpg`, `02.jpg`, ...,
-  `audio.mp3`/`audio.m4a`) and returns a `%Angler.Media.Download{kind: :slideshow}`;
-  `prepare/3` assembles them into an MP4 (`Angler.Media.Slideshow.Render`).
+  `download/3` fetches the images, in display order, and the sound
+  (`Angler.Media.Slideshow.Sound`, played as it is) of a TikTok post found by
+  `Angler.Media.TikTok` into `<dir>/slides/` (`01.jpg`, `02.jpg`, ...,
+  `audio.mp3`/`audio.m4a`).
 
   Image and sound URLs expire after a day or two, so both steps run within the
   same attempt. At most 35 images are used. Images larger than 30 MB are skipped.
   Network trouble fails the download with `:transient`, so the pipeline tries
   again later (loading the post again, with freshly signed URLs). So does a CDN
   refusing an image or the sound, or a sound ffprobe can't read, unless this is
-  the final attempt: then the image is skipped, or the slideshow is silent. A
-  degraded video is re-sent for later requests of the same link, so it is only
-  made when no retry follows.
+  the final attempt: then the image is skipped, or the slideshow is silent (an
+  Instagram post goes out as an album instead). A degraded video is re-sent for
+  later requests of the same link, so it is only made when no retry follows.
   """
   require Logger
 
   alias Angler.Media
-  alias Angler.Media.{Download, Error, Fetch}
+  alias Angler.Media.{Download, Error, Fetch, Instagram}
   alias Angler.Media.Slideshow.{Render, Sound}
   alias Angler.Media.TikTok.Post
 
@@ -50,7 +54,9 @@ defmodule Angler.Media.Slideshow do
     with :ok <- make_dir(slides),
          {:ok, images, image_bytes} <- download_images(post, slides, budget, final?, report),
          {:ok, audio} <-
-           Sound.download(post, slides,
+           Sound.download(
+             %{url: post.audio_url, duration: post.audio_duration, window: nil},
+             slides,
              budget: budget && budget - image_bytes,
              final_attempt: final?,
              on_progress: report
@@ -70,6 +76,16 @@ defmodule Angler.Media.Slideshow do
        }}
     end
   end
+
+  @doc """
+  Downloads the photos of an Instagram photo post and the post's clip of its
+  song, see `Angler.Media.Slideshow.Instagram`.
+  """
+  @spec download_instagram(Instagram.Post.t(), Instagram.Music.t(), Path.t(), keyword()) ::
+          {:ok, Download.t()} | {:error, Error.t()}
+  defdelegate download_instagram(post, music, dir, opts),
+    to: Angler.Media.Slideshow.Instagram,
+    as: :download
 
   @doc "Assembles a downloaded slideshow into the final video, see `Angler.Media.Slideshow.Render`."
   @spec prepare(Download.t(), Path.t(), keyword()) ::

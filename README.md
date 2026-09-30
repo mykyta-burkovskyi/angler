@@ -20,20 +20,25 @@ the pipeline and lets you tune storage and filtering.
   Work interrupted by a crash or restart is picked up again on the next start,
   and temporary failures (network errors, rate limits, timeouts) are retried
   with backoff. See [Restarts](#restarts) for the fine print.
-- **TikTok photo slideshows.** Photo posts (`/photo/` links, short links, or
-  slideshows behind `/video/` links) are turned into a video: the photos in
+- **Photo slideshows.** TikTok photo posts (`/photo/` links, short links, or
+  slideshows behind `/video/` links), and Instagram photo posts with music when
+  [cookies](#cookies) are configured, are turned into a video: the photos in
   order, each shown for 3–6 s and cycled for the length of the sound (up to
   90 s; a single photo stays up for the whole sound), on a canvas matching the
-  photos' shape with a blurred fill. Posts without a sound become silent videos.
+  photos' shape with a blurred fill. Instagram posts play the part of the song
+  the post uses, looped when the photos outlast it. TikTok posts without a sound
+  become silent videos.
 - **Instagram photos and carousels.** Photo posts and carousels (up to 20 photos
   and videos) are sent as they are, in order: a single photo as a photo, anything
   more as Telegram albums of up to 10 items (larger carousels arrive as several
   albums), with the post text. Videos in a carousel are fitted to the upload
   limit like any other video; photos Telegram doesn't accept (over 10 MB, or
   extreme sizes) are left out. Reels still go through yt-dlp, with the post text
-  as their caption. Posts are read without logging in; [cookies](#cookies) are
-  only a fallback. Share links, `instagr.am` links and `?img_index=` links to
-  the same post work too.
+  as their caption. Photo posts with music become a slideshow video instead when
+  a cookies file is configured (Instagram shows the music only to logged-in
+  visitors); carousels with videos stay albums. Posts are read without logging
+  in; [cookies](#cookies) are otherwise only a fallback. Share links,
+  `instagr.am` links and `?img_index=` links to the same post work too.
 - **Post text as captions.** Media is posted with its title or post text (the
   YouTube title, the TikTok or Instagram post text, ...) as a plain-text caption.
   Text longer than Telegram's 1024-character caption limit follows as a separate
@@ -339,7 +344,7 @@ are configured on the dashboard, not here.
 | `MAX_ATTEMPTS` | `3` | Attempts per link for temporary failures |
 | `PIPELINE_ENABLED` | `true` | `false` pauses processing (links are still queued) |
 | `YTDLP_UPDATE_CHANNEL` | *empty* (`.env.example`: `nightly`) | `nightly` or `stable`: keep a self-updating yt-dlp in `/data/bin`; empty uses the bundled one |
-| `YTDLP_COOKIES_FILE` | *empty* | Path of a Netscape `cookies.txt` inside the container, for yt-dlp and as a logged-in fallback for Instagram and TikTok posts, see [Cookies](#cookies) |
+| `YTDLP_COOKIES_FILE` | *empty* | Path of a Netscape `cookies.txt` inside the container, for yt-dlp, as a logged-in fallback for Instagram and TikTok posts, and to find the music of Instagram photo posts, see [Cookies](#cookies) |
 | `ALLOWED_ORIGINS` | *empty* | Extra host names the dashboard may be opened from (comma separated). `localhost`, private IPs and LAN names (`nas`, `*.local`, `*.lan`, …) always work |
 | `ALLOW_PRIVATE_NETWORK_DOWNLOADS` | `false` | `true` lets links (and the redirects yt-dlp follows) reach this machine, your LAN and other private addresses, including the compose services. While it is `false`, yt-dlp goes through Angler's own egress guard, which connects directly and ignores `HTTPS_PROXY`/`HTTP_PROXY`/`ALL_PROXY`; if the server can only reach the internet through such a proxy, set this to `true` |
 | `POOL_SIZE` | `10` | Database connections |
@@ -457,13 +462,21 @@ How Angler uses the cookies file:
   yt-dlp (with the cookies) for the post instead. Without cookies, hidden posts
   fail right away (*"This Instagram post is private, deleted or age-restricted"*)
   and rate-limited ones are tried again later.
+- **Instagram photo posts** (a photo, or photos only) are looked up once more
+  with the cookies, one request to Instagram's media info API, to find their
+  music, which Instagram shows only to logged-in visitors. With music the post
+  becomes a slideshow video, otherwise an album. When the file has no Instagram
+  login (or it has expired), when Instagram doesn't accept it (logged out, a
+  checkpoint) or when it rate-limits the account, the post goes out as an album
+  and the log says why. Export the cookies again for a missing, expired or
+  rejected login; a rate limit wears off by itself.
 - **TikTok posts** are looked up logged out first (to tell photo posts from
   videos). When TikTok hides the post, or its page can't be read, the page is
   loaded once more with the cookies. Short links are always resolved without them.
-- Angler never sends the cookies to the servers the photos and videos come from,
-  to short-link resolvers or to any redirect target. For its own requests it
-  skips lines it can't use (logged by line number, never their contents) and
-  ignores files over 1 MB.
+- Angler never sends the cookies to the servers the photos, videos and songs
+  come from, to short-link resolvers or to any redirect target. For its own
+  requests it skips lines it can't use (logged by line number, never their
+  contents) and ignores files over 1 MB.
 
 The risks:
 
@@ -550,6 +563,10 @@ the same `media` volume, read-only, at the same path.
   `YTDLP_UPDATE_CHANNEL=nightly` (or rebuild the image), and add
   [cookies](#cookies) for sites that require a login. Instagram posts that Angler
   can't read itself are handed to yt-dlp, so a current yt-dlp helps there too.
+- **Instagram photo posts with music arrive as albums.** Angler needs a cookies
+  file with a logged-in Instagram session to see a post's music. The log tells
+  why (no Instagram login in the file or it has expired, login not accepted,
+  rate limited, muted music).
 - **The dashboard loads but stays disconnected.** The websocket origin was
   rejected: add the host name you use to `ALLOWED_ORIGINS` (or set it as
   `PUBLIC_URL`).

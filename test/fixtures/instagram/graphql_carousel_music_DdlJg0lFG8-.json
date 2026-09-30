@@ -1,0 +1,90 @@
+{
+  "data": {
+    "xig_polaris_media": {
+      "__typename": "XIGPolarisCarouselMedia",
+      "code": "DdlJg0lFG8-",
+      "id": "POLARIS_3991638482632339262",
+      "pk": "3991638482632339262",
+      "gating_ruling": null,
+      "if_not_gated_logged_out": {
+        "__typename": "XIGPolarisCarouselMedia",
+        "code": "DdlJg0lFG8-",
+        "id": "POLARIS_3991638482632339262",
+        "pk": "3991638482632339262",
+        "media_type": 8,
+        "product_type": "carousel_container",
+        "original_width": 1808,
+        "original_height": 2256,
+        "caption": {
+          "text": "🎧"
+        },
+        "user": {
+          "username": "zacharylaid",
+          "full_name": "Zachary Laid"
+        },
+        "carousel_media": [
+          {
+            "__typename": "XIGPolarisImageMedia",
+            "code": "DdkwbbvlLFV",
+            "id": "POLARIS_3991528161204810069",
+            "pk": "3991528161204810069",
+            "media_type": 1,
+            "original_width": 1808,
+            "original_height": 2256,
+            "image_versions2": {
+              "candidates": [
+                {
+                  "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_1.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+                },
+                {
+                  "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_1_1080.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+                }
+              ]
+            }
+          },
+          {
+            "__typename": "XIGPolarisImageMedia",
+            "code": "DdkwbbvlMNA",
+            "id": "POLARIS_3991528161204814656",
+            "pk": "3991528161204814656",
+            "media_type": 1,
+            "original_width": 1792,
+            "original_height": 2240,
+            "image_versions2": {
+              "candidates": [
+                {
+                  "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_2.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+                },
+                {
+                  "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_2_1080.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+                }
+              ]
+            }
+          },
+          {
+            "__typename": "XIGPolarisImageMedia",
+            "code": "Ddkwbb1FCeo",
+            "id": "POLARIS_3991528161297049512",
+            "pk": "3991528161297049512",
+            "media_type": 1,
+            "original_width": 1792,
+            "original_height": 2240,
+            "image_versions2": {
+              "candidates": [
+                {
+                  "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_3.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+                },
+                {
+                  "url": "https://scontent.cdninstagram.com/v/t51.82787-15/DdlJg0lFG8-_3_1080.jpg?stp=dst-jpg_e35_tt6&oh=00_sig&oe=6AC1D6AC"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "extensions": {
+    "is_final": true
+  }
+}

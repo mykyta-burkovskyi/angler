@@ -10,6 +10,9 @@ defmodule Angler.Media.Probe do
   Whether an MP4/MOV file is "fast start" (its `moov` index box comes before the
   `mdat` media data, so players can start before the whole file arrived) is
   determined by reading the top-level box headers, see `faststart?/1`.
+
+  Configuration (`config :angler, Angler.Media.Probe`): `:timeout`, milliseconds
+  before ffprobe is stopped (default 2 minutes; tests shorten it).
   """
   alias Angler.Media
   alias Angler.Media.{Command, Error}
@@ -81,8 +84,10 @@ defmodule Angler.Media.Probe do
   @doc """
   Probes the file at `path`.
 
-  Files ffprobe cannot read as media return an error of kind `:unsupported`; a
-  missing ffprobe, a timeout or other failures return kind `:internal`.
+  Files ffprobe cannot read as media return an error of kind `:unsupported`; an
+  ffprobe that runs longer than the timeout (2 minutes, see the module
+  documentation) returns kind `:timeout`, as the other tools do; a missing
+  ffprobe or other failures return kind `:internal`.
   """
   @spec run(Path.t()) :: {:ok, t()} | {:error, Error.t()}
   def run(path) do
@@ -98,8 +103,9 @@ defmodule Angler.Media.Probe do
     ]
 
     ffprobe = Media.config(:ffprobe_path, "ffprobe")
+    timeout = :angler |> Application.get_env(__MODULE__, []) |> Keyword.get(:timeout, @timeout)
 
-    case Command.run(ffprobe, args, timeout: @timeout, max_lines: 10_000) do
+    case Command.run(ffprobe, args, timeout: timeout, max_lines: 10_000) do
       {:ok, %{exit_status: 0, output: lines}} ->
         with {:ok, json} <- decode(lines), do: {:ok, finish(parse(json), path)}
 
@@ -107,7 +113,8 @@ defmodule Angler.Media.Probe do
         {:error, failure(status, lines)}
 
       {:error, :timeout, _lines} ->
-        {:error, Error.new(:internal, "ffprobe took longer than 2 minutes")}
+        {:error,
+         Error.new(:timeout, "ffprobe took longer than #{Media.format_duration(timeout)}")}
 
       {:error, :enoent} ->
         {:error, Error.new(:internal, "ffprobe not found")}

@@ -3,8 +3,10 @@ defmodule Angler.Media.Route do
   Decides how `Angler.Media.download/3` gets a link, and gets it:
 
     1. Instagram post links are read first (`Angler.Media.Instagram.route/3`): a
-       post with photos or several items is an album (`Angler.Media.Album`), a
-       single video goes to yt-dlp with the post text as its title
+       post with a video among several items is an album (`Angler.Media.Album`); a
+       photo post is a slideshow when its music can be read
+       (`Angler.Media.Slideshow.Instagram`), else an album; a single video goes to
+       yt-dlp with the post text as its title
     2. TikTok links are resolved (`Angler.Media.TikTok.route/1`): photo posts are
        slideshows (`Angler.Media.Slideshow`), videos go to yt-dlp with their
        canonical URL
@@ -30,6 +32,9 @@ defmodule Angler.Media.Route do
 
       {:album, post} ->
         Album.download(post, dir, opts)
+
+      {:slideshow, post, music} ->
+        Slideshow.download_instagram(post, music, dir, opts)
 
       {:ytdlp, url, meta} ->
         with {:ok, download} <- ytdlp(url, dir, opts), do: {:ok, retitle(download, meta)}

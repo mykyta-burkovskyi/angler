@@ -40,14 +40,31 @@ Storage.Janitor: retention + size cap eviction of kept media (Settings)
   are stripped). yt-dlp traffic goes through `Angler.Media.EgressProxy`, which refuses
   private/loopback/link-local addresses unless `ALLOW_PRIVATE_NETWORK_DOWNLOADS=true`.
 - `Angler.Media.Route` picks how a link is fetched: Instagram posts first
-  (`Angler.Media.Instagram.route/3`), then TikTok (`Angler.Media.TikTok.route/1`), else yt-dlp.
-- TikTok photo slideshows are fetched directly (`Angler.Media.TikTok`) and assembled with
-  ffmpeg (`Angler.Media.Slideshow`); regular TikTok videos still go through yt-dlp.
-- Instagram posts are read logged out, without cookies: `Instagram.Url` (share links
-  resolved with one request) → `Instagram.GraphQL` → `Instagram.Page` → `Ytdlp.metadata/3`
-  (the only step with cookies). Photos or several items become an album
-  (`Angler.Media.Album`: CDN-only `Angler.Media.Fetch` with a shared byte budget, photos
-  checked by `Album.Photo`, videos through `Media.Prepare`, files at
+  (`Angler.Media.Instagram.route/3`: album, slideshow or yt-dlp), then TikTok
+  (`Angler.Media.TikTok.route/1`), else yt-dlp.
+- Photo posts with a sound become one video (`Angler.Media.Slideshow`, assembled with
+  ffmpeg by `Slideshow.Render`). TikTok photo posts are fetched directly
+  (`Angler.Media.TikTok`). Instagram photo posts with music (`Slideshow.Instagram`) reuse
+  `Album.download/3` for the photos, and `Slideshow.Sound` fetches the song from the CDN
+  and cuts the post's clip into `album/sound/clip.flac` (`Slideshow.Clip`), so Render
+  loops the clip, not the song; a clip that is the whole song keeps the downloaded
+  `album/sound/audio.m4a` (or `.mp3`). An Instagram post whose song can't be fetched or
+  used on the final attempt (refused, network trouble, not audio, can't be cut, an
+  ffprobe/ffmpeg timeout) goes out as an album, never as a silent video; a missing tool,
+  another ffprobe failure or a failed write stays an `:internal` error. Regular TikTok
+  videos still go through yt-dlp.
+- Instagram posts are read logged out first: `Instagram.Url` (share links resolved with
+  one request) → `Instagram.GraphQL` → `Instagram.Page` (no cookies) → `Ytdlp.metadata/3`
+  (yt-dlp always gets the cookies). The browser and app ids these requests send live in
+  `Angler.Media.Instagram` (`user_agent/0`, `app_id/0`, `asbd_id/0`).
+  Photo-only posts (one photo or several) then get one logged-in lookup when a cookies
+  file is configured (`Instagram.Soundtrack` → `Instagram.MediaInfo`,
+  `GET /api/v1/media/<pk>/info/`, the only request in the app's own code carrying
+  Instagram cookies; `Instagram.Music` reads `items[0].music_metadata`): unmuted music
+  makes a slideshow, anything else an album. Login, checkpoint and rate-limit answers give
+  an album, never a retry. Carousels with a video, and photo posts without music, become an album
+  (`Angler.Media.Album`: CDN-only fetches (`Angler.Media.Instagram.Cdn`) with a shared byte
+  budget, photos checked by `Album.Photo`, videos through `Media.Prepare`, files at
   `<entry dir>/album/NN/`); a single video (reel) goes to yt-dlp with the post text as title.
 - Albums: `Entry.media_kind == :album`, items in `entries.media_items`
   (`Angler.Entries.MediaItem`, paths relative to the entry dir, validated by
@@ -57,10 +74,12 @@ Storage.Janitor: retention + size cap eviction of kept media (Settings)
   file id. Post text over 1024 UTF-16 units follows as a message once the media was delivered
   (`Pipeline.Caption.split/3`); never on its own after an unconfirmed upload, so in local mode
   the media also gets it cut to 1024 (`Pipeline.Delivery.caption/1`).
-- Cookies (`YTDLP_COOKIES_FILE`, `Angler.Media.Cookies`) are a fallback: yt-dlp always gets a
-  private copy (`Angler.Media.Ytdlp.Runner`, shared by downloads and metadata runs);
-  TikTok post pages load once more with them when hidden or unreadable. Requests carrying
-  cookies never follow redirects and never log transport error messages.
+- Cookies (`YTDLP_COOKIES_FILE`, `Angler.Media.Cookies`) are a fallback, with one exception:
+  the music lookup of Instagram photo posts (one GET per attempt, only with an Instagram
+  `sessionid`). yt-dlp always gets a private copy (`Angler.Media.Ytdlp.Runner`, shared by
+  downloads and metadata runs); TikTok post pages load once more with them when hidden or
+  unreadable. Requests carrying cookies never follow redirects and never log transport
+  error messages.
 - External tools are wrapped behind `Angler.Media` (a behaviour, swappable in tests)
   and HTTP calls to Telegram go through `Angler.Telegram` (Req; tests stub it with
   `Req.Test` under the name `Angler.Telegram`; likewise `Angler.Media.TikTok` and

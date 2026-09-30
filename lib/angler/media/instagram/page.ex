@@ -16,8 +16,6 @@ defmodule Angler.Media.Instagram.Page do
   alias Angler.Media.Instagram
   alias Angler.Media.Instagram.{GraphQL, Url}
 
-  @user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " <>
-                "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
   @blob_re ~r/<script\b[^>]*\bdata-sjs\b[^>]*>(.*?)<\/script>/s
   @error_page ~s("tracePolicy":"polaris.httpErrorPage")
 
@@ -30,7 +28,7 @@ defmodule Angler.Media.Instagram.Page do
   @spec fetch(String.t()) :: result()
   def fetch(code) do
     headers = [
-      {"user-agent", @user_agent},
+      {"user-agent", Instagram.user_agent()},
       {"accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
       {"accept-language", "en-US,en;q=0.9"},
       {"sec-fetch-dest", "document"},

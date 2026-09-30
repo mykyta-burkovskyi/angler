@@ -1,6 +1,6 @@
 defmodule Angler.Media.Download do
   @moduledoc """
-  The result of downloading a link with yt-dlp, the images and sound of a TikTok
+  The result of downloading a link with yt-dlp, the images and sound of a
   slideshow (`Angler.Media.Slideshow`), or the photos and videos of an Instagram
   post (an album).
 
@@ -11,10 +11,15 @@ defmodule Angler.Media.Download do
     * `:width`, `:height`, `:video_codec`, `:audio_codec` - from yt-dlp metadata if known
     * `:kind` - `:video | :slideshow | :album`:
       * `:video` - a single media file at `:path`
-      * `:slideshow` - a TikTok photo post; `:path` is the directory holding `:images`
-        (paths, in display order) and `:audio_path` (the sound or nil), `:duration`
-        is the sound's and `:max_duration` the longest video to assemble (seconds,
-        the download's `:max_duration` option, or nil)
+      * `:slideshow` - photos with a sound: a TikTok photo post (`:path` is
+        `slides/`), or an Instagram photo post with music (`:path` is `album/`,
+        images at `album/NN/source.jpg`, the sound in `album/sound/`: the post's
+        clip cut to `clip.flac`, or the downloaded song, `audio.m4a` or
+        `audio.mp3`, when the clip is the whole song). `:path` is the directory
+        holding `:images` (paths, in display order) and `:audio_path` (the sound or
+        nil), `:duration` is the length of the sound that plays and
+        `:max_duration` the longest video to assemble (seconds, the download's
+        `:max_duration` option, or nil)
       * `:album` - the photos and videos of a post, sent as they are; `:path` is the
         `album` directory, `:size` the bytes of all items, `:title` the post text,
         `:items` the items in display order and `:max_duration` the longest video
