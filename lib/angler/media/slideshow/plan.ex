@@ -23,7 +23,9 @@ defmodule Angler.Media.Slideshow.Plan do
       sound, the video is that pass (capped at the limit, e.g. 35 images show for
       2.57 s each in 90 s) and the sound loops if it is shorter; else the video
       lasts as long as the sound (capped) and cycles through the images in
-      `ceil(D / 6)` equal slots
+      `max(N, ceil(D / 6))` equal slots, so every image shows at least once.
+      Lengths are compared to within half a frame: a clip measured a sample
+      longer than `6 * N` seconds still plays in one pass
 
   Slot boundaries are whole frames (`round(30 * elapsed)`), so cuts never drift
   and the duration is a whole number of frames. The sound loops when the video is
@@ -38,6 +40,8 @@ defmodule Angler.Media.Slideshow.Plan do
   @max_duration 90.0
   @fade_out 1.5
   @tolerance 0.05
+  # Lengths closer than this give the same number of frames.
+  @half_frame 0.5 / @fps
 
   @presets [
     hd: [
@@ -163,11 +167,11 @@ defmodule Angler.Media.Slideshow.Plan do
   defp layout(count, audio, limit) do
     slide = audio |> Kernel./(count) |> max(@min_slide) |> min(@max_slide)
 
-    if count * slide >= audio - 1.0e-6 do
+    if count * slide >= audio - @half_frame do
       {min(count * slide, limit), count}
     else
       seconds = min(audio, limit)
-      {seconds, ceil(seconds / @max_slide - 1.0e-9)}
+      {seconds, max(count, ceil((seconds - @half_frame) / @max_slide))}
     end
   end
 

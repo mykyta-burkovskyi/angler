@@ -132,6 +132,57 @@ defmodule Angler.Media.Slideshow.PlanTest do
       assert %Plan{duration: 3.0, slots: [{0, 45}, {1, 45}]} = Plan.timeline(2, nil, 1)
     end
 
+    test "every image shows when the sound outlasts six seconds per image" do
+      # Instagram's clip of "Solace" (20 photos) against the whole 140.586 s song
+      plan = Plan.timeline(20, 140.586)
+      assert plan.duration == 90.0
+      assert Enum.map(plan.slots, &elem(&1, 0)) == Enum.to_list(0..19)
+      assert Enum.map(plan.slots, &elem(&1, 1)) == List.duplicate(135, 20)
+      assert %Plan{audio_loop: false, audio_fade: 1.5} = plan
+
+      plan = Plan.timeline(16, 120.0)
+      assert plan.duration == 90.0
+      assert Enum.map(plan.slots, &elem(&1, 0)) == Enum.to_list(0..15)
+
+      # a 90 s clip with a maximum duration of 60 s: 12 slots of 5 s, not 10 of 6 s
+      plan = Plan.timeline(12, 90.0, 60)
+      assert plan.duration == 60.0
+      assert Enum.map(plan.slots, &elem(&1, 0)) == Enum.to_list(0..11)
+      assert Enum.map(plan.slots, &elem(&1, 1)) == List.duplicate(150, 12)
+      assert %Plan{audio_loop: false, audio_fade: 1.5} = plan
+    end
+
+    test "a cut clip plays as it is, or loops when the images outlast it" do
+      # the 90 s clip cut from the song (FLAC, measured by ffprobe)
+      plan = Plan.timeline(20, 89.999977)
+      assert plan.duration == 90.0
+      assert Enum.map(plan.slots, &elem(&1, 1)) == List.duplicate(135, 20)
+      assert %Plan{audio_loop: false, audio_fade: nil} = plan
+
+      plan = Plan.timeline(20, 30.0)
+      assert plan.duration == 60.0
+      assert Enum.map(plan.slots, &elem(&1, 0)) == Enum.to_list(0..19)
+      assert %Plan{audio_loop: true, audio_fade: 1.5} = plan
+    end
+
+    test "a clip measured a sample longer than six seconds per image plays in one pass" do
+      # ffprobe measures a cut clip to within a sample (23 µs at 44.1 kHz) of its length
+      for {count, audio} <- [{5, 30.000023}, {10, 60.000023}, {3, 18.000023}, {5, 29.999977}] do
+        plan = Plan.timeline(count, audio)
+        assert plan.duration == count * 6.0
+        assert plan.slots == Enum.map(0..(count - 1), &{&1, 180})
+        assert %Plan{audio_loop: false, audio_fade: nil} = plan
+      end
+
+      # longer than one pass: whole 6 s slots, not one more slot of each
+      plan = Plan.timeline(5, 36.000023)
+      assert plan.duration == 36.0
+      assert plan.slots == Enum.map([0, 1, 2, 3, 4, 0], &{&1, 180})
+
+      # half a frame and more is a longer sound
+      assert %Plan{slots: [_, _, _, _, _, _]} = Plan.timeline(5, 30.02)
+    end
+
     test "slot boundaries are whole frames that add up to the duration" do
       for count <- 1..35, audio <- [nil, 0.5, 7.3, 16.3265, 29.86, 55.4, 61.7, 89.99, 300.0] do
         plan = Plan.timeline(count, audio)
@@ -143,6 +194,8 @@ defmodule Angler.Media.Slideshow.PlanTest do
         assert Enum.sum(frames) / 30 == plan.duration
         assert plan.duration >= 3.0 and plan.duration <= 90.0
         assert Enum.all?(plan.slots, fn {index, _frames} -> index in 0..(count - 1) end)
+        # every image shows at least once
+        assert plan.slots |> Enum.map(&elem(&1, 0)) |> Enum.uniq() |> length() == count
       end
     end
   end
