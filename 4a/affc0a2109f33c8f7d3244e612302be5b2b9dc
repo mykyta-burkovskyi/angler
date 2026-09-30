@@ -1,0 +1,143 @@
+test/support/instagram_fixtures.ex
+  s_3b758e5207561d::t_153ec15b5ee2f9 22-23
+test/angler/media/instagram/music_test.exs
+  s_3b758e5207561d::t_94fa62dde86eee 1-123
+test/support/instagram_music_fixtures.ex
+  s_3b758e5207561d::t_94fa62dde86eee 1-187
+.env.example
+  s_3b758e5207561d::t_9e8e6f8db6bc88 142-143
+lib/angler/media/cookies.ex
+  s_3b758e5207561d::t_153ec15b5ee2f9 6-8
+CLAUDE.md
+  s_3b758e5207561d::t_00b9f06a187d47 50-59,62
+  s_3b758e5207561d::t_3190d13f5bbb8b 43-49,60-61,77-78
+  s_3b758e5207561d::t_1f52364411e921 80-82
+  s_3b758e5207561d::t_db1024852e0df1 63-65
+  s_3b758e5207561d::t_86a68e3f0cb06f 66-67,79
+lib/angler/media/instagram/page.ex
+  s_3b758e5207561d::t_85060b72509118 31
+lib/angler/media/route.ex
+  s_3b758e5207561d::t_c35de9c31241bd 6-9,36-37
+  s_3b758e5207561d::t_7b8f6b81d736b1 38
+lib/angler/media/fetch.ex
+  s_3b758e5207561d::t_21dc356a7be96e 3-6
+lib/angler/media/slideshow/render.ex
+  s_3b758e5207561d::t_0c509dad05cbfb 14-15,140,226-227
+lib/angler/media/instagram/post.ex
+  s_3b758e5207561d::t_bf15cd6cccaa27 228-234
+  s_3b758e5207561d::t_6fd0cae08e0b5f 220-223
+  s_3b758e5207561d::t_776ea0b51e549c 15-17
+  s_3b758e5207561d::t_c20b3a069b859c 235
+lib/angler/media/album.ex
+  s_3b758e5207561d::t_94fa62dde86eee 14-21,25,27,145
+  s_3b758e5207561d::t_dfa6e6f209c2d7 10-13
+test/angler/media/instagram/post_test.exs
+  s_3b758e5207561d::t_c65275b8f34d99 248,263-267
+  s_3b758e5207561d::t_2d457c5a231214 268
+test/angler/media/slideshow/commands_test.exs
+  s_3b758e5207561d::t_94fa62dde86eee 202-215,217-228,230-236,239-241
+  s_3b758e5207561d::t_0078fe25cf3f8a 216,229,237-238
+lib/angler/media/instagram/media_info.ex
+  s_3b758e5207561d::t_94fa62dde86eee 1-83,85-88,91-225
+  s_3b758e5207561d::t_85060b72509118 84
+  s_3b758e5207561d::t_d6fada07ddc5f2 89-90
+lib/angler/media/instagram/graphql.ex
+  s_3b758e5207561d::t_85060b72509118 107
+  s_3b758e5207561d::t_d6fada07ddc5f2 114-115
+lib/angler/media/slideshow/instagram.ex
+  s_3b758e5207561d::t_fddac8eb3cf24d 1-22,31-83,85-111
+  s_3b758e5207561d::t_64ab34123cd936 23-30
+  s_3b758e5207561d::t_df7d63d80a7729 84
+lib/angler/media/download.ex
+  s_3b758e5207561d::t_2d477fd7b46d9d 3,14-15
+  s_3b758e5207561d::t_00b9f06a187d47 16-22
+lib/angler/media/instagram/music.ex
+  s_3b758e5207561d::t_94fa62dde86eee 1-143
+test/angler/media/instagram_music_test.exs
+  s_3b758e5207561d::t_9a42f6c7d44f9c 307
+  s_3b758e5207561d::t_83739163c8fe11 13,236-267,289-303,306,308-309,319-329,334-338,340
+  s_3b758e5207561d::t_d1d273d9f8f343 1-12,14-111,113-115,117-124,131-140,142-195,200-212,217-230,233-235,271,273-288,304-305,310-318,330-333,339,346-351
+  s_3b758e5207561d::t_a427edaeddd743 341-345
+  s_3b758e5207561d::t_9dd0ff25d3d60e 112,116,125-130,141,196-199,213-216,231-232,268-270,272
+lib/angler/entries/entry.ex
+  s_3b758e5207561d::t_21dc356a7be96e 80-82
+lib/angler/media/slideshow/clip.ex
+  s_3b758e5207561d::t_94fa62dde86eee 1-64,67-92
+  s_3b758e5207561d::t_64ab34123cd936 65-66
+lib/angler/media.ex
+  s_3b758e5207561d::t_21dc356a7be96e 83
+  s_3b758e5207561d::t_cecddb5f9b3230 84-85
+  s_3b758e5207561d::t_2d477fd7b46d9d 4-6,17-19,80-82
+test/angler/media/instagram/media_info_test.exs
+  s_3b758e5207561d::t_94fa62dde86eee 1-8,10-51,77-218
+  s_3b758e5207561d::t_f2f4f33f3e3a3e 9,52-76
+lib/angler/media/probe.ex
+  s_3b758e5207561d::t_d0250289531c5e 116-117
+  s_3b758e5207561d::t_e241ea6e5100bb 13-15,106,108
+  s_3b758e5207561d::t_f0d0abdadf5448 87-90
+test/fixtures/instagram/info_carousel_music_DdlJg0lFG8-.json
+  s_3b758e5207561d::t_94fa62dde86eee 1-130
+lib/angler/media/instagram.ex
+  s_3b758e5207561d::t_7cabec95d6742f 91
+  s_3b758e5207561d::t_d6fada07ddc5f2 136-142
+  s_3b758e5207561d::t_31df9c2f63ef00 70-71
+  s_3b758e5207561d::t_bff803aa734a8a 4-6,22-26,31-33,43,62,72-73,77-78,82-83,89-90,93-102
+  s_3b758e5207561d::t_85060b72509118 49-53,128-135
+  s_3b758e5207561d::t_4699cb14b9d561 20-21
+  s_3b758e5207561d::t_fb4cd6a5bd025b 92
+  s_3b758e5207561d::t_8432121a4744bd 143
+lib/angler/media/instagram/cdn.ex
+  s_3b758e5207561d::t_94fa62dde86eee 1-64
+lib/angler/media/slideshow.ex
+  s_3b758e5207561d::t_300d9273f4e5ce 3-7,26,80-88
+  s_3b758e5207561d::t_77fdfe45b2817e 10,12,19-21
+  s_3b758e5207561d::t_94fa62dde86eee 9,11,57-59
+  s_3b758e5207561d::t_384046d2135f81 89
+test/angler/media/instagram/cdn_test.exs
+  s_3b758e5207561d::t_94fa62dde86eee 1-98
+lib/angler/media/instagram/soundtrack.ex
+  s_3b758e5207561d::t_def7083900d921 105-109,111-113,117
+  s_3b758e5207561d::t_76e936a06cc07c 1-19,24-59,62,66-104,110,118-119
+  s_3b758e5207561d::t_bce0371fa31a17 20-23,60-61,63-65
+  s_3b758e5207561d::t_ff022836a81504 114-116
+test/angler/media/slideshow/instagram_test.exs
+  s_3b758e5207561d::t_c8e7b35c92ac18 1-231,238-248,250-314
+  s_3b758e5207561d::t_8bd29969798cd1 232-237,249
+lib/angler/media/slideshow/images.ex
+  s_3b758e5207561d::t_0c509dad05cbfb 39,51-56
+  s_3b758e5207561d::t_4d1cb94e903f51 57
+README.md
+  s_3b758e5207561d::t_9e8e6f8db6bc88 23-25,28-30,37-41,347,465-467,566-567
+  s_3b758e5207561d::t_b3a41ea4c8b0da 468-472,568-569
+  s_3b758e5207561d::t_3e1f8f226a26fe 476-479
+lib/angler/media/slideshow/sound.ex
+  s_3b758e5207561d::t_64ab34123cd936 16-21
+  s_3b758e5207561d::t_94fa62dde86eee 3-5,9-13,22,27,31-40,44-52,54-55,57,59,64,67,69-70,84,90,97,110-143,148-149,152
+test/angler/media/slideshow/sound_test.exs
+  s_3b758e5207561d::t_94fa62dde86eee 1-265
+test/angler/media/slideshow/clip_test.exs
+  s_3b758e5207561d::t_94fa62dde86eee 1-119,153-175
+  s_3b758e5207561d::t_4d0e2af0da7c43 120-152
+test/fixtures/instagram/graphql_carousel_music_DdlJg0lFG8-.json
+  s_3b758e5207561d::t_94fa62dde86eee 1-90
+lib/angler/media/slideshow/commands.ex
+  s_3b758e5207561d::t_0078fe25cf3f8a 178-181,190
+  s_3b758e5207561d::t_94fa62dde86eee 16-18,20,170-177,182-189,191-194
+  s_3b758e5207561d::t_aecc9d2c6d1309 195-196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4aaffc0a2109f33c8f7d3244e612302be5b2b9dc",
+  "prompts": {},
+  "sessions": {
+    "s_3b758e5207561d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f1149476-463f-4664-88de-0aba2fdb8792",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Mykyta Burkovskyi <burkovskyi.work@gmail.com>"
+    }
+  }
+}
