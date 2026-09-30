@@ -189,7 +189,7 @@ defmodule AnglerWeb.EntriesLive do
   defp empty_state_copy(:all),
     do:
       {"hero-inbox", "No entries yet",
-       "Post a video link in a chat with the bot and it will show up here."}
+       "Post a link in a chat with the bot and it will show up here."}
 
   defp empty_state_copy(:active),
     do:
@@ -197,7 +197,7 @@ defmodule AnglerWeb.EntriesLive do
        "Links show up here while they're downloaded, processed and sent."}
 
   defp empty_state_copy(:done),
-    do: {"hero-check-circle", "No deliveries yet", "Videos sent to your chats show up here."}
+    do: {"hero-check-circle", "No deliveries yet", "Everything sent to your chats shows up here."}
 
   defp empty_state_copy(:failed),
     do: {"hero-face-smile", "No failures", "Links that couldn't be delivered show up here."}

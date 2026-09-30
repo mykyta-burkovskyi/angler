@@ -294,6 +294,15 @@ defmodule Angler.TelegramTest do
                "reply_parameters" => %{"message_id" => 3, "allow_sending_without_reply" => true}
              }
     end
+
+    test "can be sent without a notification", %{chat_id: chat_id} do
+      stub_bot_api(%{"sendVideo" => sent_video(chat_id)})
+
+      assert {:ok, _} =
+               Telegram.send_video(chat_id, {:file_id, "BAAC"}, disable_notification: true)
+
+      assert_received {:bot_api, "sendVideo", %{"disable_notification" => true}}
+    end
   end
 
   describe "send_video/3 without an answer" do
@@ -322,7 +331,7 @@ defmodule Angler.TelegramTest do
       assert Error.transient?(error)
     end
 
-    test "is only tracked for sendVideo", %{chat_id: chat_id} do
+    test "is not tracked for text messages", %{chat_id: chat_id} do
       Req.Test.stub(Angler.Telegram, fn conn ->
         request_sent()
         Req.Test.transport_error(conn, :timeout)
@@ -353,6 +362,14 @@ defmodule Angler.TelegramTest do
                "reply_parameters" => %{"message_id" => 9, "allow_sending_without_reply" => true},
                "link_preview_options" => %{"is_disabled" => true}
              }
+
+      other_chat_id = unique_id()
+      assert {:ok, _} = Telegram.send_message(other_chat_id, "quiet", disable_notification: true)
+
+      assert_received {:bot_api, "sendMessage",
+                       %{"text" => "quiet", "disable_notification" => true} = params}
+
+      refute Map.has_key?(params, "reply_parameters")
     end
 
     test "set_message_reaction/4 sets and clears", %{chat_id: chat_id} do

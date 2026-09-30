@@ -9,13 +9,23 @@
 
   <%= if @entry do %>
     <div id="entry" class="mt-5 space-y-6">
-      <.entry_header entry={@entry} video_url={@video_url} thumbnail_url={@thumbnail_url} />
+      <.entry_header
+        entry={@entry}
+        video_url={@video_url}
+        thumbnail_url={@thumbnail_url}
+        album={@album}
+      />
 
       <.status_section entry={@entry} progress={@progress} />
 
       <div class="grid gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
-          <.preview_panel entry={@entry} video_url={@video_url} thumbnail_url={@thumbnail_url} />
+          <.preview_panel
+            entry={@entry}
+            video_url={@video_url}
+            thumbnail_url={@thumbnail_url}
+            album={@album}
+          />
 
           <div class="grid gap-6 md:grid-cols-2">
             <.media_panel entry={@entry} />

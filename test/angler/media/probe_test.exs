@@ -116,6 +116,69 @@ defmodule Angler.Media.ProbeTest do
     end
   end
 
+  describe "decode/1 and failure/2" do
+    # ffprobe 9 prints the opening brace of its JSON before its messages, older
+    # versions after them.
+    @messages [
+      "[mov,mp4,m4a,3gp,3g2,mj2 @ 0x5581d2c0] moov atom not found",
+      "/tmp/garbage.mp4: Invalid data found when processing input"
+    ]
+
+    test "report files that are not media as unsupported, in either order" do
+      for lines <- [
+            ["{"] ++ @messages ++ ["", "}"],
+            @messages ++ ["{", "", "}"],
+            @messages
+          ] do
+        assert %Error{kind: :unsupported, message: "Not a playable media file", output: output} =
+                 Probe.failure(1, lines)
+
+        assert output == Enum.join(@messages, "\n")
+      end
+    end
+
+    test "report other failures as internal, with ffprobe's last message" do
+      message = "missing.mp4: No such file or directory"
+
+      for lines <- [["{", message, "", "}"], [message, "{", "", "}"]] do
+        assert Probe.failure(1, lines) ==
+                 Error.new(:internal, "ffprobe failed (exit 1): " <> message, message)
+      end
+
+      assert Probe.failure(1, ["{", "", "}"]) ==
+               Error.new(:internal, "ffprobe failed (exit 1)", "")
+    end
+
+    test "decode the JSON document around ffprobe's messages" do
+      document = [
+        "{",
+        "    \"streams\": [",
+        "        {",
+        "            \"codec_type\": \"video\",",
+        "            \"width\": 640",
+        "        }",
+        "    ],",
+        "    \"format\": {",
+        "        \"duration\": \"2.5\"",
+        "    }",
+        "}"
+      ]
+
+      warning = "[mov,mp4,m4a,3gp,3g2,mj2 @ 0x5581d2c0] stream 1, offset 0x30: partial file"
+
+      for lines <- [
+            [warning | document],
+            [hd(document), warning, "    Last message repeated 1 times" | tl(document)]
+          ] do
+        assert {:ok, json} = Probe.decode(lines)
+        assert %Probe{width: 640, duration: 2.5} = Probe.parse(json)
+      end
+
+      assert {:error, %Error{kind: :internal, message: "Could not parse the ffprobe output"}} =
+               Probe.decode(["{", "    \"format\": {"])
+    end
+  end
+
   describe "faststart?/1" do
     @moduletag :tmp_dir
 

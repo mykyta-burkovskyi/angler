@@ -113,17 +113,23 @@ defmodule Angler.Entries.Queue do
     )
   end
 
-  @doc "See `Angler.Entries.mark_failed/3`."
-  @spec mark_failed(Entry.t(), Entry.error_kind(), String.t()) :: Entry.t()
-  def mark_failed(%Entry{} = entry, kind, message) do
-    Entries.update!(entry, %{
-      status: :failed,
-      stage_detail: nil,
-      error_kind: kind,
-      error: truncate_error(message),
-      claimed_at: nil,
-      finished_at: DateTime.utc_now()
-    })
+  @doc "See `Angler.Entries.mark_failed/4`."
+  @spec mark_failed(Entry.t(), Entry.error_kind(), String.t(), map()) :: Entry.t()
+  def mark_failed(%Entry{} = entry, kind, message, attrs \\ %{}) do
+    Entries.update!(
+      entry,
+      Map.merge(
+        %{
+          status: :failed,
+          stage_detail: nil,
+          error_kind: kind,
+          error: truncate_error(message),
+          claimed_at: nil,
+          finished_at: DateTime.utc_now()
+        },
+        attrs
+      )
+    )
   end
 
   @doc "See `Angler.Entries.schedule_retry/5`."

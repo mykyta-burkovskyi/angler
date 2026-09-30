@@ -16,4 +16,14 @@ defmodule AnglerWeb.PlatformComponentsTest do
     assert platform_name("vm.tiktok.com") == "TikTok"
     assert platform_name("example.com") == nil
   end
+
+  test "Instagram's short domain is Instagram too" do
+    assert platform_name("instagr.am") == "Instagram"
+    assert platform_name("www.instagr.am") == "Instagram"
+    assert platform_name("instagram.com") == "Instagram"
+    assert platform_name("notinstagr.am") == nil
+
+    html = render_html(&platform_tile/1, host: "instagr.am")
+    assert text(html, "div[title=Instagram]") =~ "IG"
+  end
 end

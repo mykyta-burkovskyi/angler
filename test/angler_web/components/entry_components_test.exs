@@ -4,6 +4,8 @@ defmodule AnglerWeb.EntryComponentsTest do
   import AnglerWeb.ComponentTestHelpers
   import AnglerWeb.EntryComponents
 
+  alias Angler.Entries.MediaItem
+
   describe "entry_row/1" do
     test "links the title to the entry and describes where it came from" do
       entry =
@@ -101,9 +103,63 @@ defmodule AnglerWeb.EntryComponentsTest do
     end
   end
 
+  describe "retry_confirm/1" do
+    test "asks before a delivered entry is sent again" do
+      assert retry_confirm(entry(status: :done)) == "Download and send this to the chat again?"
+      assert retry_confirm(entry(status: :done, media_kind: :slideshow)) =~ "this to the chat"
+
+      assert retry_confirm(entry(status: :done, media_kind: :album, media_items: items(3))) ==
+               "Download and send all 3 items of this album to the chat again?"
+
+      assert retry_confirm(entry(status: :done, media_kind: :album)) =~ "this whole album"
+
+      assert retry_confirm(entry(status: :done, media_kind: :album, media_items: items(1))) ==
+               "Download and send this photo to the chat again?"
+    end
+
+    test "asks before an album is sent again after some of it was sent" do
+      [sent, _unsent, _other] = items = items(3)
+      items = [%{sent | file_id: "photo-file"} | tl(items)]
+
+      assert retry_confirm(entry(status: :failed, media_kind: :album, media_items: items)) ==
+               "1 of 3 items were already sent. Send the whole album again?"
+
+      assert retry_confirm(entry(status: :cancelled, media_kind: :album, media_items: items)) =~
+               "already sent"
+    end
+
+    test "doesn't ask when nothing was sent" do
+      assert retry_confirm(entry(status: :failed)) == nil
+
+      assert retry_confirm(entry(status: :failed, media_kind: :album, media_items: items(2))) ==
+               nil
+
+      assert retry_confirm(entry(status: :queued)) == nil
+    end
+
+    test "is what the row's Send again button asks" do
+      entry = entry(status: :done, media_kind: :album, media_items: items(2))
+      html = render_html(&entry_row/1, id: "row", entry: entry)
+
+      assert attribute(html, "#row-retry", "data-confirm") =~ "all 2 items of this album"
+    end
+  end
+
+  test "album_kind/1" do
+    assert album_kind(entry(media_kind: :album, media_items: items(2))) == "album"
+    assert album_kind(entry(media_kind: :album, media_items: items(1))) == "photo"
+    assert album_kind(entry(media_kind: :album)) == "album"
+    assert album_kind(entry(media_kind: :video)) == nil
+    assert album_kind(entry()) == nil
+  end
+
   test "entry_host/1 and entry_title/1" do
     assert entry_host(entry(source_host: "www.YouTube.com")) == "youtube.com"
     assert entry_host(entry(source_host: nil, url: "https://youtu.be/x")) == "youtu.be"
     assert entry_title(entry(title: "")) == entry().url
+  end
+
+  defp items(count) do
+    for n <- 1..count//1, do: MediaItem.new(%{type: :photo, path: "album/0#{n}/photo.jpg"})
   end
 end

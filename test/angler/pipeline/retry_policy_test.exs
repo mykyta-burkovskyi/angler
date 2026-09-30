@@ -225,7 +225,7 @@ defmodule Angler.Pipeline.RetryPolicyTest do
 
         assert RetryPolicy.telegram_failure(error, reused_file_id?) ==
                  {:telegram,
-                  "Telegram did not confirm the upload in time; the video may still appear in the chat"}
+                  "Telegram did not confirm the upload in time; it may still appear in the chat"}
       end
     end
 
@@ -288,6 +288,18 @@ defmodule Angler.Pipeline.RetryPolicyTest do
       }
 
       assert {:telegram, _text} = RetryPolicy.telegram_failure(error, true)
+    end
+  end
+
+  describe "partial_text/3 and partial_unconfirmed_text/2" do
+    test "tell how much of an album was sent, and why not the rest" do
+      assert RetryPolicy.partial_text(10, 14, "Telegram sendMediaGroup failed (400): Bad Request") ==
+               "Only 10 of 14 items were sent: Telegram sendMediaGroup failed (400): Bad Request"
+
+      assert RetryPolicy.partial_text(1, 2, nil) == "Only 1 of 2 items were sent"
+
+      assert RetryPolicy.partial_unconfirmed_text(10, 14) ==
+               "10 of 14 items were confirmed; the rest may still appear in the chat"
     end
   end
 

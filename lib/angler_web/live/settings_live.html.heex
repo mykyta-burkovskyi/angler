@@ -14,7 +14,7 @@
     >
       <.form_section
         title="Storage"
-        description="Delivered videos are kept on disk for previews on this dashboard."
+        description="Delivered media is kept on disk for previews on this dashboard."
       >
         <div class="grid gap-5 sm:grid-cols-2">
           <.input
@@ -28,7 +28,7 @@
           <.input
             field={@form[:retention_hours]}
             type="number"
-            label="Keep videos for"
+            label="Keep media for"
             suffix="hours"
             min="0"
             hint={retention_hint(@form[:retention_hours].value)}
@@ -123,8 +123,8 @@
         <.input
           field={@form[:title_captions]}
           type="checkbox"
-          label="Post titles as captions"
-          hint="Send the video's title with it (trimmed to Telegram's 1024-character limit)."
+          label="Post text as captions"
+          hint="Send the title or post text with the media. Text longer than Telegram's 1024-character caption limit follows as a separate message."
         />
       </.form_section>
 

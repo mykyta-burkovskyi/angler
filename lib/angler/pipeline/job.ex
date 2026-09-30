@@ -3,9 +3,13 @@ defmodule Angler.Pipeline.Job do
   The processor step of `Angler.Pipeline` for a claimed entry: re-uses the
   Telegram file of an earlier delivery of the same URL, or the video an earlier
   attempt of this entry already prepared (after a failed upload or a restart), or
-  downloads the video and makes it fit the upload limit (`Angler.Media`). The
+  downloads the media and makes it fit the upload limit (`Angler.Media`). The
   message then goes to the `:telegram` batcher (`Angler.Pipeline.Upload`), or is
   failed (see `Angler.Pipeline.Failures`).
+
+  Albums (`media_kind: :album`) are never re-used: every attempt downloads them
+  again. One that a restart interrupted after part of it was delivered is never
+  sent again (see `Angler.Pipeline.AlbumUpload.finish_partial/3`).
 
   Failures are reported with `Broadway.Message.failed/2` as `{kind, text}` or
   `{kind, text, retry_after_seconds}`; `Angler.Entries` status changes are made
@@ -15,7 +19,7 @@ defmodule Angler.Pipeline.Job do
 
   alias Angler.{Entries, Media, Settings, Storage}
   alias Angler.Entries.Entry
-  alias Angler.Pipeline.{Feedback, RetryPolicy}
+  alias Angler.Pipeline.{AlbumUpload, Feedback, RetryPolicy}
   alias Broadway.Message
 
   @progress_interval 1_000
@@ -36,7 +40,7 @@ defmodule Angler.Pipeline.Job do
   ]
 
   @doc """
-  Prepares the video of the entry in `message.data` and routes the message to the
+  Prepares the media of the entry in `message.data` and routes the message to the
   `:telegram` batcher with `t:Angler.Pipeline.Upload.t/0` data, or fails it.
 
   `context` must contain `:media`, the `Angler.Media` implementation.
@@ -44,18 +48,39 @@ defmodule Angler.Pipeline.Job do
   @spec process(Message.t(), map()) :: Message.t()
   def process(%Message{data: %Entry{} = entry} = message, %{media: media}) do
     settings = Settings.get()
-    # The reaction stays on the message while the entry is retried.
-    if Entries.first_claim?(entry), do: Feedback.started(entry, settings)
+    first_claim? = Entries.first_claim?(entry)
 
-    case Entries.find_reusable_file(entry.url) do
-      %Entry{} = cached -> reuse(message, entry, cached, settings)
-      nil -> prepare(message, entry, settings, media)
+    if not first_claim? and AlbumUpload.partly_delivered?(entry) do
+      # A restart interrupted the upload of this album after part of it was
+      # delivered: sending it again would post that part twice. Failures finishes
+      # it as sent in part.
+      Message.failed(message, {:telegram, "the upload was interrupted"})
+    else
+      # The reaction stays on the message while the entry is retried.
+      entry = if first_claim?, do: first_attempt(entry, settings), else: entry
+
+      case Entries.find_reusable_file(entry.url) do
+        %Entry{} = cached -> reuse(message, entry, cached, settings)
+        nil -> prepare(message, entry, settings, media)
+      end
     end
+  end
+
+  # Album items delivered before (the entry is sent again from the dashboard) are
+  # not part of this claim cycle.
+  defp first_attempt(entry, settings) do
+    Feedback.started(entry, settings)
+    if entry.media_items == [], do: entry, else: Entries.update!(entry, %{media_items: []})
   end
 
   defp reuse(message, entry, cached, settings) do
     entry =
-      Entries.update!(entry, cached |> Map.take(@reused_fields) |> Map.put(:reused_file_id, true))
+      Entries.update!(
+        entry,
+        cached
+        |> Map.take(@reused_fields)
+        |> Map.merge(%{reused_file_id: true, media_items: []})
+      )
 
     to_upload(message, %{
       entry: entry,
@@ -84,7 +109,10 @@ defmodule Angler.Pipeline.Job do
 
   # An earlier attempt of this claim cycle may have left a finished video behind
   # (its upload failed, or a restart interrupted it). A first claim (a new entry,
-  # or "Send again" from the dashboard) always starts from scratch.
+  # or "Send again" from the dashboard) always starts from scratch, and albums
+  # are downloaded again.
+  defp prepared_output(%Entry{media_kind: :album}, _settings), do: nil
+
   defp prepared_output(%Entry{output_bytes: bytes, reused_file_id: false} = entry, settings)
        when is_integer(bytes) do
     with false <- Entries.first_claim?(entry),
@@ -126,12 +154,7 @@ defmodule Angler.Pipeline.Job do
              target_bytes: target_bytes,
              on_progress: throttled_progress(entry, :processing)
            ) do
-      to_upload(message, %{
-        entry: prepared(entry, output),
-        video: {:path, output.path},
-        output: output,
-        settings: settings
-      })
+      to_upload(message, upload_data(prepared(entry, output), output, settings))
     else
       {:error, %Media.Error{} = error} ->
         Message.failed(message, RetryPolicy.media_failure(error))
@@ -150,10 +173,26 @@ defmodule Angler.Pipeline.Job do
       |> Map.put(:media_kind, download.kind)
       |> compact()
       # Nothing prepared by an earlier attempt is left: never re-use it.
-      |> Map.merge(%{reused_file_id: false, output_bytes: nil})
+      |> Map.merge(%{reused_file_id: false, output_bytes: nil, media_items: []})
 
     entry
     |> Entries.advance(:processing, metadata)
+    |> Storage.record_usage()
+  end
+
+  defp prepared(entry, %Media.Output{kind: :album} = output) do
+    metadata = %{
+      output_bytes: output.size,
+      width: output.width,
+      height: output.height,
+      transcoded: output.transcoded,
+      duration: nil,
+      video_codec: nil,
+      media_items: AlbumUpload.media_items(output, entry.storage_path)
+    }
+
+    entry
+    |> Entries.update!(metadata)
     |> Storage.record_usage()
   end
 
@@ -168,6 +207,12 @@ defmodule Angler.Pipeline.Job do
     |> Entries.update!(metadata)
     |> Storage.record_usage()
   end
+
+  defp upload_data(entry, %Media.Output{kind: :album} = output, settings),
+    do: AlbumUpload.data(entry, output, settings)
+
+  defp upload_data(entry, %Media.Output{} = output, settings),
+    do: %{entry: entry, video: {:path, output.path}, output: output, settings: settings}
 
   defp to_upload(message, data) do
     message

@@ -98,6 +98,13 @@ defmodule Angler.Media.Ytdlp.Outcome do
   def too_big_message(nil), do: "Source file is too large"
   def too_big_message(bytes), do: "Source file is larger than #{Media.format_mb(bytes)}"
 
+  @doc """
+  The error for a yt-dlp run that failed with `exit_status` (without a result),
+  classified from its `ERROR:` lines like `interpret/3` does.
+  """
+  @spec failure(integer(), [String.t()]) :: Error.t()
+  def failure(exit_status, lines), do: failure_error(exit_status, lines)
+
   defp failure_error(exit_status, lines) do
     errors = for "ERROR: " <> message <- lines, do: message
 

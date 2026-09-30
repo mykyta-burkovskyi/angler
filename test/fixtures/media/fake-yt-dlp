@@ -2,6 +2,10 @@
 # Stand-in for yt-dlp in tests. Downloads behave according to the last path segment
 # of the URL; the arguments, environment and cookies it saw are written to the home
 # directory (-P home:DIR) for assertions.
+#
+# With --skip-download (Angler.Media.Ytdlp.Metadata) it prints metadata/<code>.jsonl
+# (next to this script) for a post URL ending in <code>/, or fails like yt-dlp for
+# the codes private, rate-limited, no-video, empty and hang.
 
 dir=$(dirname "$0")
 
@@ -26,6 +30,7 @@ home=""
 info=""
 url=""
 proxy=""
+metadata=""
 
 parse() {
   while [ $# -gt 0 ]; do
@@ -33,6 +38,7 @@ parse() {
       -P) case "$2" in home:*) home="${2#home:}" ;; esac; shift 2 ;;
       --print-to-file) info="$3"; shift 3 ;;
       --proxy) proxy="$2"; shift 2 ;;
+      --skip-download) metadata=1; shift ;;
       --) url="$2"; shift 2 ;;
       *) shift ;;
     esac
@@ -50,6 +56,31 @@ if [ -f "$home/cookies.txt" ]; then
 fi
 mkdir -p "$home/tmp"
 
+if [ -n "$metadata" ]; then
+  code="${url%/}"
+  code="${code##*/}"
+  echo "[Instagram] Extracting URL: $url"
+  if [ -f "$dir/metadata/$code.jsonl" ]; then
+    cat "$dir/metadata/$code.jsonl" > "$info"
+    exit 0
+  fi
+  case "$code" in
+    private)
+      echo "ERROR: [Instagram] $code: This content is only available for registered users who follow this account" >&2
+      exit 1
+      ;;
+    rate-limited)
+      echo "ERROR: [Instagram] $code: Requested content was redirected to the login page. You have exceeded the rate-limit for accessing posts anonymously" >&2
+      exit 1
+      ;;
+    no-video) echo "ERROR: [Instagram] $code: No video formats found!" >&2; exit 1 ;;
+    empty) exit 0 ;;
+    hang) exec sleep 60 ;;
+  esac
+  echo "ERROR: Unsupported URL: $url" >&2
+  exit 1
+fi
+
 download() {
   echo "[youtube] abc: Downloading webpage"
   echo '[meta] {"is_live": false, "duration": 12.5}'
@@ -62,7 +93,9 @@ download() {
   echo "[result] \"$home/source.mp4\""
 }
 
-case "${url##*/}" in
+# Instagram post URLs end in "/": their code is the last segment.
+name="${url%/}"
+case "${name##*/}" in
   ok) download avc1.64001F none; exit 0 ;;
   max-downloads) download avc1.64001F mp4a.40.2; echo "[info] Maximum number of downloads reached"; exit 101 ;;
   audio-only) download none mp3; exit 0 ;;

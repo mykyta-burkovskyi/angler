@@ -3,8 +3,10 @@ defmodule Angler.Pipeline.Feedback do
   Best-effort feedback in the chat while an entry is processed: a 👀 reaction on
   the original message while working (set once when it can be sent right away,
   it stays while the entry is retried), cleared on success, 👎 and (depending on
-  `failure_replies`) a short reply on failure, and an "uploading video" chat action
-  before an upload.
+  `failure_replies`) a short reply on failure or when only part of an album could
+  be sent, and an "uploading video" (or photo) chat action before an upload.
+  Also sends the post text that is too long for a caption as a message of its own
+  after the media (`follow_up/3`).
 
   Every call returns right away: the Bot API calls run in tasks under
   `Angler.TaskSupervisor`, so slow or rate limited requests never hold up a
@@ -20,6 +22,9 @@ defmodule Angler.Pipeline.Feedback do
 
   @working "👀"
   @failed "👎"
+  # The follow-up text may wait behind the album it follows (one rate limiter
+  # slot per item, and in groups 20 messages a minute).
+  @follow_up_max_wait 120_000
 
   @doc """
   Reacts 👀 to the original message when reactions are enabled, but only when the
@@ -48,16 +53,19 @@ defmodule Angler.Pipeline.Feedback do
   def unconfirmed(%Entry{} = entry, %Setting{} = settings), do: succeeded(entry, settings)
 
   @doc """
-  Shows "sending video" in the chat while a video is uploaded (not in channels,
-  which don't support chat actions).
+  Shows `action` ("upload_video" or "upload_photo", i.e. "sending video" or
+  "sending photo") in the chat while media is uploaded (not in channels, which
+  don't support chat actions).
   """
-  @spec uploading(Entry.t()) :: :ok
-  def uploading(%Entry{chat_type: "channel"}), do: :ok
+  @spec uploading(Entry.t(), String.t()) :: :ok
+  def uploading(entry, action \\ "upload_video")
 
-  def uploading(%Entry{} = entry) do
+  def uploading(%Entry{chat_type: "channel"}, _action), do: :ok
+
+  def uploading(%Entry{} = entry, action) do
     async(fn ->
       entry.chat_id
-      |> Telegram.send_chat_action("upload_video",
+      |> Telegram.send_chat_action(action,
         message_thread_id: entry.message_thread_id,
         chat_type: entry.chat_type
       )
@@ -70,13 +78,73 @@ defmodule Angler.Pipeline.Feedback do
   `failure_replies` is `:all`, or `:private` and the entry comes from a private chat.
   """
   @spec failed(Entry.t(), Entry.error_kind(), Setting.t()) :: :ok
-  def failed(%Entry{} = entry, kind, %Setting{} = settings) do
+  def failed(%Entry{} = entry, kind, %Setting{} = settings),
+    do: failure_feedback(entry, failure_text(kind, settings), settings)
+
+  @doc """
+  For an album of which only `sent` of `total` items were sent, and the rest never
+  will be: like `failed/3`, with `partial_text/2` as the reply.
+  """
+  @spec partial(Entry.t(), non_neg_integer(), non_neg_integer(), Setting.t()) :: :ok
+  def partial(%Entry{} = entry, sent, total, %Setting{} = settings),
+    do: failure_feedback(entry, partial_text(sent, total), settings)
+
+  @doc "The reply sent to the chat when an entry failed with `kind`."
+  @spec failure_text(Entry.error_kind(), Setting.t()) :: String.t()
+  def failure_text(:unsupported, _settings), do: "I couldn't find anything to send at this link."
+
+  def failure_text(:too_large, settings) do
+    limit_mb = div(Settings.upload_limit_bytes(settings), 1_000_000)
+    "This is too large or too long to send here (the limit is #{limit_mb} MB)."
+  end
+
+  def failure_text(:unavailable, _settings), do: "This post is private, removed or unavailable."
+  def failure_text(:timeout, _settings), do: "Downloading this took too long."
+  def failure_text(_kind, _settings), do: "Something went wrong while fetching this."
+
+  @doc "The reply sent to the chat when only `sent` of an album's `total` items were sent."
+  @spec partial_text(non_neg_integer(), non_neg_integer()) :: String.t()
+  def partial_text(sent, total), do: "Only #{sent} of #{total} items could be sent."
+
+  @doc """
+  Sends `text`, the post text that didn't fit into the caption of media that is
+  in the chat, as a message of its own replying to the message
+  `reply_to_message_id` (the media), or to the original message when that is nil. Without
+  notification, since the media just notified the chat. When the message to reply
+  to is gone, the text is sent once more without replying.
+  """
+  @spec follow_up(Entry.t(), String.t(), integer() | nil) :: :ok
+  def follow_up(%Entry{} = entry, text, reply_to_message_id) when is_binary(text) do
+    async(fn ->
+      entry
+      |> send_follow_up(text, reply_to_message_id || entry.message_id)
+      |> log_error(entry, "send the post text")
+    end)
+  end
+
+  defp send_follow_up(entry, text, reply_to_message_id) do
+    opts = [
+      message_thread_id: entry.message_thread_id,
+      chat_type: entry.chat_type,
+      link_preview: false,
+      disable_notification: true,
+      max_wait: @follow_up_max_wait
+    ]
+
+    reply = [reply_to_message_id: reply_to_message_id]
+
+    with {:error, error} = failed <- Telegram.send_message(entry.chat_id, text, reply ++ opts) do
+      if Telegram.Error.kind(error) == :reply_not_found,
+        do: Telegram.send_message(entry.chat_id, text, opts),
+        else: failed
+    end
+  end
+
+  defp failure_feedback(entry, text, settings) do
     react? = settings.reactions_enabled
     reply? = reply?(entry, settings.failure_replies)
 
     if react? or reply? do
-      text = failure_text(kind, settings)
-
       async(fn ->
         if react?, do: react(entry, @failed)
         if reply?, do: reply(entry, text)
@@ -85,19 +153,6 @@ defmodule Angler.Pipeline.Feedback do
       :ok
     end
   end
-
-  @doc "The reply sent to the chat when an entry failed with `kind`."
-  @spec failure_text(Entry.error_kind(), Setting.t()) :: String.t()
-  def failure_text(:unsupported, _settings), do: "I couldn't find a video at this link."
-
-  def failure_text(:too_large, settings) do
-    limit_mb = div(Settings.upload_limit_bytes(settings), 1_000_000)
-    "This video is too large or too long to send here (the limit is #{limit_mb} MB)."
-  end
-
-  def failure_text(:unavailable, _settings), do: "This video is private, removed or unavailable."
-  def failure_text(:timeout, _settings), do: "Downloading this video took too long."
-  def failure_text(_kind, _settings), do: "Something went wrong while fetching this video."
 
   defp reply?(_entry, :all), do: true
   defp reply?(entry, :private), do: Entry.private_chat?(entry)

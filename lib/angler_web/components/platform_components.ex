@@ -1,7 +1,7 @@
 defmodule AnglerWeb.PlatformComponents do
   @moduledoc """
-  The video platforms the dashboard recognizes by host: their names, and the
-  colored monogram tile that stands in for a missing thumbnail.
+  The platforms the dashboard recognizes by host: their names, and the colored
+  monogram tile that stands in for a missing thumbnail.
 
   All components are styled with the design tokens from `assets/css/app.css`.
   """
@@ -12,7 +12,7 @@ defmodule AnglerWeb.PlatformComponents do
   # {domains, name, monogram, tile classes}
   @platforms [
     {~w(tiktok.com), "TikTok", "TT", "bg-zinc-900 text-white dark:bg-zinc-700"},
-    {~w(instagram.com), "Instagram", "IG",
+    {~w(instagram.com instagr.am), "Instagram", "IG",
      "bg-linear-to-br from-amber-400 via-pink-500 to-purple-600 text-white"},
     {~w(youtube.com youtu.be), "YouTube", "YT", "bg-red-600 text-white"},
     {~w(x.com twitter.com), "X", "X", "bg-zinc-900 text-white dark:bg-zinc-700"},
@@ -47,8 +47,8 @@ defmodule AnglerWeb.PlatformComponents do
   end
 
   @doc """
-  Renders a tile for a video platform: a colored monogram for known hosts and a
-  film icon otherwise. Fills its container.
+  Renders a tile for a platform: a colored monogram for known hosts and a film
+  icon otherwise. Fills its container.
   """
   attr :host, :string, default: nil
   attr :class, :any, default: nil

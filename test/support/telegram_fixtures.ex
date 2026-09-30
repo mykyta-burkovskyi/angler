@@ -176,6 +176,60 @@ defmodule Angler.TelegramFixtures do
     )
   end
 
+  # {width, height, file_size} of the sizes Telegram makes of a sent photo.
+  @photo_sizes [{90, 113, 1_811}, {320, 400, 21_413}, {1080, 1350, 143_227}]
+
+  @doc """
+  The Message Telegram returns for a sent photo: `"photo"` lists its PhotoSizes
+  (90x113, 320x400 and 1080x1350, smallest first), each with its own `file_id`
+  and `file_unique_id`.
+  """
+  def sent_photo(chat_id, attrs \\ %{}) do
+    Map.merge(
+      %{
+        "message_id" => unique_id(),
+        "date" => System.os_time(:second),
+        "chat" => %{"id" => chat_id, "type" => "private"},
+        "photo" => Enum.map(@photo_sizes, &photo_size/1)
+      },
+      attrs
+    )
+  end
+
+  defp photo_size({width, height, file_size}) do
+    %{
+      "file_id" => "AgACAgIAAxkBAAI#{unique_id()}",
+      "file_unique_id" => "AQAD#{unique_id()}",
+      "width" => width,
+      "height" => height,
+      "file_size" => file_size
+    }
+  end
+
+  @doc """
+  The Messages Telegram returns for a sent album: one per item, in order, all with
+  the same `"media_group_id"` (a string). `items` are `:photo`/`:video` atoms, or
+  maps with a `:type` (e.g. the items given to `Angler.Telegram.send_media_group/3`).
+  Photos are built like `sent_photo/2`, videos like `sent_video/2`; `attrs` are
+  merged into every message.
+  """
+  def sent_media_group(chat_id, items, attrs \\ %{}) do
+    media_group_id = Integer.to_string(unique_id())
+
+    Enum.map(items, fn item ->
+      chat_id
+      |> sent_media(media_type(item))
+      |> Map.put("media_group_id", media_group_id)
+      |> Map.merge(attrs)
+    end)
+  end
+
+  defp media_type(%{type: type}), do: media_type(type)
+  defp media_type(type) when type in [:photo, :video], do: type
+
+  defp sent_media(chat_id, :photo), do: sent_photo(chat_id)
+  defp sent_media(chat_id, :video), do: sent_video(chat_id)
+
   @doc """
   Stubs the Bot API (`Req.Test` under the name `Angler.Telegram`). Every request is
   reported to `test_pid` as `{:bot_api, method, params}` (params are the decoded

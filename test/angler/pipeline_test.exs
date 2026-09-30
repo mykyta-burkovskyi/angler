@@ -305,9 +305,9 @@ defmodule Angler.PipelineTest do
       start_pipeline()
 
       replies = %{
-        "unsupported" => "I couldn't find a video at this link.",
-        "unavailable" => "This video is private, removed or unavailable.",
-        "too-large" => "This video is too large or too long to send here (the limit is 50 MB)."
+        "unsupported" => "I couldn't find anything to send at this link.",
+        "unavailable" => "This post is private, removed or unavailable.",
+        "too-large" => "This is too large or too long to send here (the limit is 50 MB)."
       }
 
       for {path, reply} <- replies do
@@ -526,7 +526,7 @@ defmodule Angler.PipelineTest do
                attempts: 1,
                error_kind: :telegram,
                error:
-                 "Telegram did not confirm the upload in time; the video may still appear in the chat"
+                 "Telegram did not confirm the upload in time; it may still appear in the chat"
              } = failed
 
       assert_received {:bot_api, "sendVideo", _params}
@@ -641,7 +641,7 @@ defmodule Angler.PipelineTest do
       assert_receive {:bot_api, "sendMessage",
                       %{
                         "chat_id" => ^exhausted_chat_id,
-                        "text" => "Something went wrong while fetching this video."
+                        "text" => "Something went wrong while fetching this."
                       }},
                      @timeout
 
@@ -685,7 +685,7 @@ defmodule Angler.PipelineTest do
                attempts: 1,
                error_kind: :telegram,
                error:
-                 "Telegram did not confirm the upload in time; the video may still appear in the chat",
+                 "Telegram did not confirm the upload in time; it may still appear in the chat",
                purged_at: nil
              } = failed = Entries.get(uploading.id)
 
@@ -705,6 +705,39 @@ defmodule Angler.PipelineTest do
       refute_received {:bot_api, "sendVideo", %{"chat_id" => ^uploading_chat_id}}
       refute_received {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👎"}]}}
       assert_receive {:bot_api, "sendChatAction", _params}, @timeout
+    end
+
+    test "with a local Bot API server, sends no post text on its own for an interrupted upload" do
+      telegram_config = Application.fetch_env!(:angler, Angler.Telegram)
+
+      Application.put_env(
+        :angler,
+        Angler.Telegram,
+        Keyword.put(telegram_config, :local_mode, true)
+      )
+
+      on_exit(fn -> Application.put_env(:angler, Angler.Telegram, telegram_config) end)
+
+      chat_id = unique_id()
+      title = String.duplicate("Long title ", 200)
+      {:ok, [entry]} = enqueue("https://fake.test/ok/#{unique_id()}", chat_id)
+      [_claimed] = Entries.claim(1)
+
+      # Its request may have been sent (with the text cut to fit the caption, see
+      # Delivery.caption/1) or not: e.g. it was still waiting for its rate limiter slot.
+      entry = prepared_entry(Entries.get!(entry.id))
+      Entries.update!(entry, %{status: :uploading, title: title})
+
+      start_pipeline()
+
+      assert_receive {:bot_api, "setMessageReaction", %{"chat_id" => ^chat_id, "reaction" => []}},
+                     @timeout
+
+      assert %Entry{status: :failed, error_kind: :telegram} = Entries.get(entry.id)
+
+      # The video may never appear: the text would be posted alone.
+      refute_receive {:bot_api, "sendMessage", %{"chat_id" => ^chat_id}}, 1_500
+      refute_received {:bot_api, "sendVideo", _params}
     end
   end
 

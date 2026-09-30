@@ -5,6 +5,10 @@ defmodule Angler.Pipeline.Failures do
   `Angler.Pipeline.RetryPolicy`. Permanently failed entries lose their files and
   get failure feedback in the chat.
 
+  An album of which a part was delivered (e.g. the upload crashed after its first
+  part) is never retried, since that would post the part again: it fails for good
+  as sent in part (`Angler.Pipeline.AlbumUpload.finish_partial/3`).
+
   Failures are reported with `Broadway.Message.failed/2` as `{kind, text}` or
   `{kind, text, retry_after_seconds}`, or come from a stage that raised.
 
@@ -18,7 +22,7 @@ defmodule Angler.Pipeline.Failures do
 
   alias Angler.{Entries, Settings, Storage}
   alias Angler.Entries.Entry
-  alias Angler.Pipeline.{DbRetry, Feedback, RetryPolicy}
+  alias Angler.Pipeline.{AlbumUpload, DbRetry, Feedback, RetryPolicy}
   alias Broadway.Message
 
   @expected_failures [:unsupported, :unavailable, :too_large]
@@ -55,10 +59,14 @@ defmodule Angler.Pipeline.Failures do
          true <- Entry.active?(entry) and same_claim?(entry, claimed) do
       {kind, text, retry_after} = RetryPolicy.classify(message.status)
 
-      case RetryPolicy.decide(entry, kind, retry_after, decide_opts(context)) do
-        {:retry, delay} -> retry(entry, kind, text, delay, [])
-        {:postpone, delay} -> retry(entry, kind, text, delay, count_attempt: false)
-        :fail -> fail(entry, kind, text)
+      if AlbumUpload.partly_delivered?(entry) do
+        AlbumUpload.finish_partial(entry, Settings.get(), text)
+      else
+        case RetryPolicy.decide(entry, kind, retry_after, decide_opts(context)) do
+          {:retry, delay} -> retry(entry, kind, text, delay, [])
+          {:postpone, delay} -> retry(entry, kind, text, delay, count_attempt: false)
+          :fail -> fail(entry, kind, text)
+        end
       end
     end
 

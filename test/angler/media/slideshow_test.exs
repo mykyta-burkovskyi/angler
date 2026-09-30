@@ -4,6 +4,7 @@ defmodule Angler.Media.SlideshowTest do
   import Angler.TikTokFixtures
 
   alias Angler.Media.{Download, Error, Slideshow}
+  alias Angler.Media.Slideshow.Sound
   alias Angler.Media.TikTok.Post
 
   @moduletag :tmp_dir
@@ -223,6 +224,13 @@ defmodule Angler.Media.SlideshowTest do
     assert {:error,
             %Error{kind: :transient, message: "Could not download the slideshow sound (HTTP 502)"}} =
              download(post(2), dir)
+  end
+
+  test "Sound.extension/1 names the sound after ffprobe's format" do
+    assert Sound.extension("mp3") == ".mp3"
+    assert Sound.extension("mov,mp4,m4a,3gp,3g2,mj2") == ".m4a"
+    assert Sound.extension("ogg") == ""
+    assert Sound.extension(nil) == ""
   end
 
   describe "with ffprobe" do

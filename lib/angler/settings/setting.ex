@@ -12,8 +12,8 @@ defmodule Angler.Settings.Setting do
   @max_chat_id Bitwise.bsl(1, 52)
 
   @default_hosts ~w(
-    tiktok.com instagram.com youtube.com youtu.be x.com twitter.com reddit.com redd.it
-    facebook.com fb.watch vimeo.com twitch.tv threads.net threads.com bsky.app
+    tiktok.com instagram.com instagr.am youtube.com youtu.be x.com twitter.com reddit.com
+    redd.it facebook.com fb.watch vimeo.com twitch.tv threads.net threads.com bsky.app
     pinterest.com pin.it streamable.com dailymotion.com snapchat.com
   )
 
@@ -28,7 +28,7 @@ defmodule Angler.Settings.Setting do
   schema "settings" do
     # Total disk space the kept media may use; oldest files are evicted first.
     field :storage_limit_mb, :integer, default: 10_240
-    # How long delivered videos are kept on disk. 0 = delete right after sending.
+    # How long delivered media is kept on disk. 0 = delete right after sending.
     field :retention_hours, :integer, default: 168
     # Finished entries (and their files) are deleted this many days after they
     # finished. 0 = keep them forever.
@@ -47,7 +47,8 @@ defmodule Angler.Settings.Setting do
     field :failure_replies, Ecto.Enum, values: @failure_replies, default: :private
     # React to messages (👀 while working, 👎 on failure) where reactions are allowed.
     field :reactions_enabled, :boolean, default: true
-    # Post the video's title as its caption (plain text, see Angler.Pipeline.Caption).
+    # Post the title or post text as the caption (plain text); text too long for a
+    # caption follows as a message of its own (see Angler.Pipeline.Caption.split/3).
     field :title_captions, :boolean, default: true
 
     timestamps()

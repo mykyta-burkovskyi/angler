@@ -1,52 +1,33 @@
 defmodule AnglerWeb.EntryLive.PanelComponents do
   @moduledoc """
-  The detail panels of the entry page (`AnglerWeb.EntryLive`): the video preview,
-  media information, processing times, stored files, the source link and the
-  Telegram message.
+  The detail panels of the entry page (`AnglerWeb.EntryLive`): media information,
+  processing times, stored files, the source link and the Telegram message (the
+  preview is in `AnglerWeb.EntryLive.PreviewComponents`).
   """
   use AnglerWeb, :html
 
-  alias Angler.Entries.Entry
+  alias Angler.Entries.{Entry, MediaItem}
   alias AnglerWeb.Format
 
-  @doc "Renders the stored video, or why there is none."
+  @doc """
+  Renders what is known about the media: a video's duration, resolution, codec and
+  sizes, or how many photos and videos an album has and their total size.
+  """
   attr :entry, Entry, required: true
-  attr :video_url, :string, default: nil
-  attr :thumbnail_url, :string, default: nil
 
-  def preview_panel(assigns) do
+  def media_panel(%{entry: %Entry{media_kind: :album}} = assigns) do
     ~H"""
-    <.panel id="preview-panel" title="Preview" body_class="">
-      <div :if={@video_url} class="overflow-hidden rounded-b-xl bg-black">
-        <video
-          id="entry-video"
-          controls
-          preload="metadata"
-          playsinline
-          src={@video_url}
-          poster={@thumbnail_url}
-          class="mx-auto max-h-[70vh] w-full object-contain"
-        ></video>
-      </div>
-      <.empty_state :if={!@video_url} id="no-preview" icon="hero-film" title="No preview">
-        {no_preview_text(@entry)}
-      </.empty_state>
+    <.panel id="media-panel" title="Media">
+      <.list>
+        <:item title="Items">
+          <span id="entry-album-items">{item_counts(@entry.media_items)}</span>
+        </:item>
+        <:item title="Size">{sizes(@entry)}</:item>
+        <:item title="Transcoded">{yes_no(@entry.transcoded)}</:item>
+      </.list>
     </.panel>
     """
   end
-
-  defp no_preview_text(%Entry{status: :done, purged_at: %DateTime{}}),
-    do: "The video was removed from storage by the retention or size limits."
-
-  defp no_preview_text(%Entry{status: :done}), do: "The video isn't stored on this server."
-
-  defp no_preview_text(%Entry{status: status}) when status in [:failed, :cancelled],
-    do: "Nothing was stored for this entry."
-
-  defp no_preview_text(%Entry{}), do: "The preview appears here once the video is ready."
-
-  @doc "Renders what is known about the video: duration, resolution, codec and sizes."
-  attr :entry, Entry, required: true
 
   def media_panel(assigns) do
     ~H"""
@@ -61,6 +42,15 @@ defmodule AnglerWeb.EntryLive.PanelComponents do
       </.list>
     </.panel>
     """
+  end
+
+  # "5 photos · 2 videos"
+  defp item_counts(items) do
+    [photo: "photo", video: "video"]
+    |> Enum.map(fn {type, noun} -> {Enum.count(items, &(&1.type == type)), noun} end)
+    |> Enum.reject(fn {count, _noun} -> count == 0 end)
+    |> Enum.map_join(" · ", fn {count, noun} -> "#{count} #{noun}#{if count != 1, do: "s"}" end)
+    |> or_placeholder()
   end
 
   defp resolution(%Entry{width: width, height: height})
@@ -140,7 +130,15 @@ defmodule AnglerWeb.EntryLive.PanelComponents do
             <.copy_button id="copy-url" value={@entry.url} label="Copy link" />
           </span>
         </:item>
-        <:item title="Title">{or_placeholder(@entry.title)}</:item>
+        <:item title="Title">
+          <%!-- An album's text is shown in full under its preview. --%>
+          <span
+            class={@entry.media_kind == :album && "line-clamp-4"}
+            title={@entry.media_kind == :album && @entry.title}
+          >
+            {or_placeholder(@entry.title)}
+          </span>
+        </:item>
         <:item title="Platform">
           {platform_name(entry_host(@entry)) || or_placeholder(entry_host(@entry))}
         </:item>
@@ -150,10 +148,20 @@ defmodule AnglerWeb.EntryLive.PanelComponents do
     """
   end
 
-  @doc "Renders the chat and message the entry came from, the reply and the uploaded file."
+  @doc """
+  Renders the chat and message the entry came from, the reply and the uploaded
+  file, or for an album how many of its items were sent and its first message.
+  """
   attr :entry, Entry, required: true
 
   def telegram_panel(assigns) do
+    # Albums are never sent again from a file id.
+    assigns =
+      assign(assigns,
+        album?: assigns.entry.media_kind == :album,
+        file_id: assigns.entry.media_kind != :album && assigns.entry.telegram_file_id
+      )
+
     ~H"""
     <.panel id="telegram-panel" title="Telegram">
       <.list>
@@ -164,27 +172,22 @@ defmodule AnglerWeb.EntryLive.PanelComponents do
         </:item>
         <:item title="Sender">{sender(@entry)}</:item>
         <:item title="Message">{message(@entry)}</:item>
-        <:item title="Reply">
+        <:item :if={@album?} title="Sent">
+          <span id="entry-sent-items" class="tabular-nums">{sent_items(@entry.media_items)}</span>
+        </:item>
+        <:item title={if @album?, do: "First message", else: "Reply"}>
           {if @entry.reply_message_id,
             do: "##{@entry.reply_message_id}",
             else: Format.placeholder()}
         </:item>
         <:item title="File ID">
-          <span :if={@entry.telegram_file_id} class="flex items-center gap-1">
-            <span
-              id="entry-file-id"
-              class="min-w-0 truncate font-mono text-xs"
-              title={@entry.telegram_file_id}
-            >
-              {Format.truncate(@entry.telegram_file_id, 24)}
+          <span :if={@file_id} class="flex items-center gap-1">
+            <span id="entry-file-id" class="min-w-0 truncate font-mono text-xs" title={@file_id}>
+              {Format.truncate(@file_id, 24)}
             </span>
-            <.copy_button
-              id="copy-file-id"
-              value={@entry.telegram_file_id}
-              label="Copy file ID"
-            />
+            <.copy_button id="copy-file-id" value={@file_id} label="Copy file ID" />
           </span>
-          <span :if={!@entry.telegram_file_id}>{Format.placeholder()}</span>
+          <span :if={!@file_id}>{Format.placeholder()}</span>
         </:item>
       </.list>
     </.panel>
@@ -195,6 +198,14 @@ defmodule AnglerWeb.EntryLive.PanelComponents do
   defp sender(%Entry{from_name: name, from_id: nil}), do: name
   defp sender(%Entry{from_name: nil, from_id: id}), do: "User #{id}"
   defp sender(%Entry{from_name: name, from_id: id}), do: "#{name} (#{id})"
+
+  defp sent_items([]), do: Format.placeholder()
+
+  # "1 of 1 item", "2 of 5 items"
+  defp sent_items(items) do
+    total = length(items)
+    "#{Enum.count(items, &MediaItem.delivered?/1)} of #{total} item#{if total != 1, do: "s"}"
+  end
 
   defp message(%Entry{message_id: id, message_thread_id: nil}), do: "##{id}"
 

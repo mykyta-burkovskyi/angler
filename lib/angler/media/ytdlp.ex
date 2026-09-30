@@ -1,6 +1,7 @@
 defmodule Angler.Media.Ytdlp do
   @moduledoc """
-  Downloads one video with yt-dlp.
+  Downloads one video with yt-dlp, and reads the metadata of a post's items
+  (`metadata/3`, `Angler.Media.Ytdlp.Metadata`).
 
   The format selection prefers H.264/AAC in MP4 up to 1080p that already fits the
   upload limit (yt-dlp's default picks AV1/Opus WebM for YouTube, which Telegram does
@@ -23,19 +24,18 @@ defmodule Angler.Media.Ytdlp do
   download runs (`Angler.Media.Ytdlp.Progress.size_guard/2`) and on the finished
   file, and `Angler.Media.download/3` checks the measured duration of the file.
 
-  Unless private networks are allowed, yt-dlp reaches the network only through an
-  `Angler.Media.EgressProxy`, which refuses private addresses and connects directly:
-  an outbound proxy configured through `HTTPS_PROXY`/`HTTP_PROXY`/`ALL_PROXY`, which
-  yt-dlp would otherwise use, is then not used.
+  Every run goes through `Angler.Media.Ytdlp.Runner`: unless private networks are
+  allowed, yt-dlp reaches the network only through an `Angler.Media.EgressProxy`,
+  which refuses private addresses and connects directly (an outbound proxy
+  configured through `HTTPS_PROXY`/`HTTP_PROXY`/`ALL_PROXY`, which yt-dlp would
+  otherwise use, is then not used), and it gets a private copy of the cookies file.
 
   Failures are classified into the error kinds of `Angler.Entries.Entry` by
   `Angler.Media.Ytdlp.Outcome`.
   """
   alias Angler.Media
-  alias Angler.Media.{Command, Download, Egress, EgressProxy, Error}
-  alias Angler.Media.Ytdlp.{Outcome, Progress}
-
-  require Logger
+  alias Angler.Media.{Command, Download, Error}
+  alias Angler.Media.Ytdlp.{Metadata, Outcome, Progress, Runner}
 
   @default_timeout :timer.minutes(30)
   @format_sort "vcodec:h264,hdr:sdr,res:1080,fps:30,acodec:aac,ext:mp4:m4a,proto:https"
@@ -54,87 +54,41 @@ defmodule Angler.Media.Ytdlp do
   def download(url, dir, opts) do
     dir = Path.expand(dir)
 
-    case start_proxy() do
-      {:ok, proxy} ->
-        try do
-          result = run(url, dir, opts, proxy && proxy.url)
-          finish(result, stop_proxy(proxy), dir, opts)
-        after
-          stop_proxy(proxy)
-        end
-
-      {:error, reason} ->
-        {:error, Error.new(:internal, "Could not start the download proxy: #{inspect(reason)}")}
+    build_args = fn run ->
+      args(url, dir, opts |> Keyword.merge(run) |> Keyword.put(:ffmpeg, configured_ffmpeg()))
     end
-  end
 
-  defp start_proxy do
-    if Egress.private_networks_allowed?(), do: {:ok, nil}, else: EgressProxy.start()
-  end
-
-  defp stop_proxy(nil), do: []
-  defp stop_proxy(proxy), do: EgressProxy.stop(proxy)
-
-  defp run(url, dir, opts, proxy_url) do
-    cache_dir = Media.cache_dir()
-    File.mkdir_p(cache_dir)
-    cookies = copy_cookies(dir)
-
-    extra = [
-      cookies: cookies,
-      cache_dir: cache_dir,
-      ffmpeg: configured_ffmpeg(),
-      proxy: proxy_url
+    command_opts = [
+      timeout: Keyword.get(opts, :timeout, @default_timeout),
+      on_line: Progress.handler(opts[:on_progress]),
+      on_tick: Progress.size_guard(dir, opts[:max_source_bytes])
     ]
 
-    try do
-      Command.run(executable(), args(url, dir, Keyword.merge(opts, extra)),
-        cd: dir,
-        env: env(proxy_url),
-        timeout: Keyword.get(opts, :timeout, @default_timeout),
-        on_line: Progress.handler(opts[:on_progress]),
-        on_tick: Progress.size_guard(dir, opts[:max_source_bytes])
-      )
-    catch
-      :throw, {:source_too_large, bytes} -> {:error, :source_too_large, bytes}
-    after
-      if cookies, do: File.rm(cookies)
-      File.rm_rf(Path.join(dir, "tmp"))
+    case Runner.run(dir, build_args, command_opts) do
+      {:ok, result, blocked} ->
+        with {:error, error} <- outcome(result, dir, opts),
+             do: {:error, Runner.blocked(error, blocked)}
+
+      {:error, error} ->
+        {:error, error}
     end
+  catch
+    :throw, {:source_too_large, _bytes} ->
+      {:error, Error.new(:too_large, Outcome.too_big_message(opts[:max_source_bytes]))}
   end
 
-  # yt-dlp ignores proxy variables once --proxy is given; they are set for the tools
-  # it starts (ffmpeg honours http_proxy and no_proxy, deno HTTPS_PROXY).
-  defp env(nil), do: Media.tool_env()
-
-  defp env(proxy_url) do
-    Media.tool_env() ++
-      Enum.map(~w(http_proxy HTTP_PROXY https_proxy HTTPS_PROXY), &{&1, proxy_url}) ++
-      Enum.map(~w(no_proxy NO_PROXY all_proxy ALL_PROXY), &{&1, nil})
-  end
-
-  defp finish(result, blocked, dir, opts) do
-    case outcome(result, dir, opts) do
-      {:error, %Error{kind: kind} = error} when blocked != [] and kind != :too_large ->
-        message =
-          "Downloads may not reach private network addresses (#{Enum.join(blocked, ", ")}); " <>
-            "set ALLOW_PRIVATE_NETWORK_DOWNLOADS=true to allow them"
-
-        {:error, %{error | kind: :unavailable, message: message}}
-
-      outcome ->
-        outcome
-    end
-  end
+  @doc """
+  Reads the metadata of every item of the post at `url` without downloading
+  anything, see `Angler.Media.Ytdlp.Metadata.run/3`.
+  """
+  @spec metadata(String.t(), Path.t(), keyword()) :: {:ok, [map()]} | {:error, Error.t()}
+  defdelegate metadata(url, dir, opts \\ []), to: Metadata, as: :run
 
   defp outcome(result, dir, opts) do
     case result do
       {:ok, %{exit_status: status, output: lines}} ->
         with {:ok, path} <- Outcome.interpret(status, lines, opts),
              do: build_download(path, dir, opts)
-
-      {:error, :source_too_large, _bytes} ->
-        {:error, Error.new(:too_large, Outcome.too_big_message(opts[:max_source_bytes]))}
 
       {:error, :timeout, lines} ->
         timeout = Keyword.get(opts, :timeout, @default_timeout)
@@ -186,29 +140,6 @@ defmodule Angler.Media.Ytdlp do
     case Command.find_executable(Media.config(:ffmpeg_path, "ffmpeg")) do
       {:ok, path} -> path
       {:error, :enoent} -> nil
-    end
-  end
-
-  # yt-dlp writes the cookie jar back when it exits, so it gets a private, writable
-  # copy of the configured file for every run. The copy is made readable by the app
-  # user only before the secrets are written into it; File.copy/2 (unlike File.cp/2)
-  # keeps the mode of an existing destination.
-  defp copy_cookies(dir) do
-    target = Path.join(dir, "cookies.txt")
-
-    with source when is_binary(source) <- Media.config(:cookies_file),
-         :ok <- File.write(target, ""),
-         :ok <- File.chmod(target, 0o600),
-         {:ok, _bytes} <- File.copy(source, target) do
-      target
-    else
-      nil ->
-        nil
-
-      {:error, reason} ->
-        File.rm(target)
-        Logger.warning("Ignoring the yt-dlp cookies file: #{:file.format_error(reason)}")
-        nil
     end
   end
 

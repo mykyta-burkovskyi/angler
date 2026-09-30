@@ -4,21 +4,24 @@ defmodule Angler.Telegram do
   `result` field of Telegram's response, or `{:error, %Angler.Telegram.Error{}}`.
 
   Methods that post into a chat go through `Angler.Telegram.RateLimiter` so the
-  bot stays within Telegram's per-chat, per-group and global limits. A send waits
-  for its slot, and when Telegram still answers 429 the chat is backed off and the
-  call is retried (at most twice), as long as the wait is short: up to a minute,
-  but only 10 s for `sendVideo`, which holds up one of the pipeline's upload slots.
+  bot stays within Telegram's per-chat, per-group and global limits (an album
+  counts as one message per item). A send waits for its slot, and when Telegram
+  still answers 429 the chat is backed off and the call is retried (at most
+  twice), as long as the wait is short: up to a minute, but only 10 s for uploads
+  (`sendVideo`, `sendPhoto`, `sendMediaGroup`), which hold up one of the
+  pipeline's upload slots. Messages, uploads and reactions take a `:max_wait`
+  option (ms) to change that.
   Longer waits are returned as a 429 error with `retry_after` set, so the caller
   can reschedule. Reactions and chat actions are best effort: a 429 for them is
   returned right away and doesn't hold back the chat.
 
-  Nothing else is retried here. A `sendVideo` whose request was sent completely
-  but never answered (a timeout or closed connection while waiting) fails with the
+  Nothing else is retried here. An upload whose request was sent completely but
+  never answered (a timeout or closed connection while waiting) fails with the
   `:unconfirmed` kind (see `Angler.Telegram.Error`): Telegram may still post the
-  video, so sending it again could post it twice. A local Bot API server answers
-  `sendVideo` only after it has uploaded the file to Telegram and closes
-  connections that stay silent for 500 s, so local-mode uploads that take longer
-  than that end up unconfirmed.
+  media, so sending it again could post it twice. A local Bot API server answers
+  only after it has uploaded the files to Telegram and closes connections that
+  stay silent for 500 s, so local-mode uploads that take longer than that end up
+  unconfirmed.
 
   The bot token is part of every request URL. It never appears in errors or logs
   produced here (see `redact/1`).
@@ -26,7 +29,7 @@ defmodule Angler.Telegram do
   The requests themselves (Req, response decoding, rate limiting and 429 retries)
   are made by `Angler.Telegram.HTTP`.
   """
-  alias Angler.Telegram.{Error, HTTP, VideoBody}
+  alias Angler.Telegram.{Error, HTTP, MediaBody, VideoBody}
 
   @type result :: {:ok, term()} | {:error, Error.t()}
 
@@ -35,7 +38,7 @@ defmodule Angler.Telegram do
   # getUpdates holds the connection for up to `timeout` seconds; wait a bit longer.
   @long_poll_margin 15
   # Less than the default minute (see `Angler.Telegram.HTTP.send_to_chat/5`): a
-  # waiting sendVideo holds up one of the pipeline's upload slots.
+  # waiting upload holds up one of the pipeline's upload slots.
   @upload_max_wait_ms 10_000
 
   @doc """
@@ -107,7 +110,9 @@ defmodule Angler.Telegram do
 
   Options: `:reply_to_message_id`, `:message_thread_id`, `:chat_type` (for rate limiting),
   `:caption`, `:duration`, `:width`, `:height`, `:thumbnail` (JPEG path),
-  `:supports_streaming` (default true).
+  `:supports_streaming` (default true), `:disable_notification`, `:max_wait` (ms
+  to wait for the rate limiter, default 10 s; a longer wait returns a 429 error
+  without sending anything).
 
   Replies never fail because the original message was deleted meanwhile
   (`allow_sending_without_reply`). The thumbnail is only sent with uploads: Telegram
@@ -129,22 +134,85 @@ defmodule Angler.Telegram do
         width: to_integer(opts[:width]),
         height: to_integer(opts[:height]),
         supports_streaming: Keyword.get(opts, :supports_streaming, true),
+        disable_notification: opts[:disable_notification],
         reply_parameters: reply_parameters(opts[:reply_to_message_id])
       )
 
     with {:ok, body} <- VideoBody.build(video, fields, opts[:thumbnail]) do
-      HTTP.send_to_chat("sendVideo", chat_id, :message, body,
-        chat_type: opts[:chat_type],
-        receive_timeout: @upload_receive_timeout,
-        max_wait: @upload_max_wait_ms,
-        track_sent: true
+      upload("sendVideo", chat_id, body, opts)
+    end
+  end
+
+  @doc """
+  Sends a photo as a reply, like `send_video/3`.
+
+  `photo` is `{:path, absolute_path}` (a JPEG, PNG or WebP file) or `{:file_id, id}`.
+  Options: `:reply_to_message_id`, `:message_thread_id`, `:chat_type`, `:caption`,
+  `:disable_notification`, `:max_wait` (default 10 s).
+
+  Returns the sent Message: `result["photo"]` is a list of PhotoSize maps (`file_id`,
+  `file_unique_id`, `width`, `height`, ...), one per size Telegram made. A request
+  that was sent but not answered returns an error of kind `:unconfirmed`.
+  """
+  @spec send_photo(integer(), {:path, Path.t()} | {:file_id, String.t()}, keyword()) :: result()
+  def send_photo(chat_id, photo, opts \\ []) do
+    fields =
+      compact(
+        chat_id: chat_id,
+        message_thread_id: opts[:message_thread_id],
+        caption: opts[:caption],
+        disable_notification: opts[:disable_notification],
+        reply_parameters: reply_parameters(opts[:reply_to_message_id])
       )
+
+    with {:ok, body} <- MediaBody.photo(photo, fields) do
+      upload("sendPhoto", chat_id, body, opts)
+    end
+  end
+
+  @doc """
+  Sends 2 to 10 photos and videos as an album replying to a message.
+
+  Each item is a map (see `t:Angler.Telegram.MediaBody.item/0`):
+
+    * `:type` - `:photo` or `:video`
+    * `:media` - `{:path, absolute_path}` or `{:file_id, id}`, as for `send_video/3`
+    * `:width`, `:height`, `:duration` - optional, videos only
+    * `:thumbnail` - optional JPEG path, only sent for uploaded videos (never for
+      photos or files sent by `file_id`)
+    * `:caption` - optional, only used for the first item
+
+  Videos are sent with `supports_streaming`. Options: `:reply_to_message_id`,
+  `:message_thread_id`, `:chat_type`, `:caption` (the album's caption, shown with
+  the first item; wins over the first item's `:caption`), `:disable_notification`,
+  `:max_wait` (default 10 s). The album books one rate limiter slot per item.
+
+  Returns the sent Messages, one per item in order, sharing a `media_group_id`:
+  photos have `"photo"` (a list of PhotoSize maps), videos `"video"` (or
+  `"animation"` / `"document"` if Telegram converted them). Any other number of
+  items fails with a 400 error without calling Telegram. A request that was sent
+  but not answered returns an error of kind `:unconfirmed`.
+  """
+  @spec send_media_group(integer(), [MediaBody.item()], keyword()) :: result()
+  def send_media_group(chat_id, items, opts \\ []) when is_list(items) do
+    fields =
+      compact(
+        chat_id: chat_id,
+        message_thread_id: opts[:message_thread_id],
+        disable_notification: opts[:disable_notification],
+        reply_parameters: reply_parameters(opts[:reply_to_message_id])
+      )
+
+    with {:ok, body} <- MediaBody.media_group(items, fields, opts[:caption]) do
+      upload("sendMediaGroup", chat_id, body, opts, length(items))
     end
   end
 
   @doc """
   Sends a text message. Options: `:reply_to_message_id`, `:message_thread_id`,
-  `:chat_type`, `:parse_mode`, `:link_preview` (false disables the link preview).
+  `:chat_type`, `:parse_mode`, `:link_preview` (false disables the link preview),
+  `:disable_notification`, `:max_wait` (ms to wait for the rate limiter, default
+  a minute; a longer wait returns a 429 error without sending anything).
   """
   @spec send_message(integer(), String.t(), keyword()) :: result()
   def send_message(chat_id, text, opts \\ []) do
@@ -154,12 +222,17 @@ defmodule Angler.Telegram do
         message_thread_id: opts[:message_thread_id],
         text: text,
         parse_mode: opts[:parse_mode],
+        disable_notification: opts[:disable_notification],
         reply_parameters: reply_parameters(opts[:reply_to_message_id]),
         link_preview_options: link_preview_options(Keyword.get(opts, :link_preview, true))
       )
 
-    HTTP.send_to_chat("sendMessage", chat_id, :message, [json: Map.new(fields)],
-      chat_type: opts[:chat_type]
+    HTTP.send_to_chat(
+      "sendMessage",
+      chat_id,
+      :message,
+      [json: Map.new(fields)],
+      Keyword.take(opts, [:chat_type, :max_wait])
     )
   end
 
@@ -211,6 +284,18 @@ defmodule Angler.Telegram do
   defdelegate redact(text), to: HTTP
 
   ## Helpers
+
+  # Uploads may be posted even when Telegram's answer never arrives (see the
+  # moduledoc), so their sending is tracked.
+  defp upload(method, chat_id, body, opts, count \\ 1) do
+    HTTP.send_to_chat(method, chat_id, :message, body,
+      chat_type: opts[:chat_type],
+      count: count,
+      receive_timeout: @upload_receive_timeout,
+      max_wait: opts[:max_wait] || @upload_max_wait_ms,
+      track_sent: true
+    )
+  end
 
   defp compact(params), do: Enum.reject(params, fn {_key, value} -> is_nil(value) end)
 

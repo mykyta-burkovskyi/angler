@@ -16,7 +16,7 @@ defmodule AnglerWeb.SettingsLive.PanelComponents do
 
   def storage_panel(assigns) do
     ~H"""
-    <.panel id="storage-panel" title="Storage" description="Videos and thumbnails kept on disk.">
+    <.panel id="storage-panel" title="Storage" description="Media and thumbnails kept on disk.">
       <.storage_meter id="storage-meter" usage={@usage} />
       <.button id="run-cleanup" class="mt-5 w-full" phx-click="cleanup" disabled={@cleaning?}>
         <.icon

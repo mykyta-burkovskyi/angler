@@ -139,18 +139,81 @@ defmodule Angler.Pipeline.CaptionTest do
     end
   end
 
-  describe "for_entry/2" do
-    test "uses the entry's title and URL" do
+  describe "build/3" do
+    test "cuts at :max_length instead of the caption limit" do
+      title = String.duplicate("word ", 800)
+
+      assert Caption.build(title, "https://youtu.be/x", max_length: 4096) ==
+               String.trim(title)
+
+      caption = Caption.build(title <> "end", "https://youtu.be/x", max_length: 100)
+      assert caption == String.duplicate("word ", 19) <> "word…"
+      assert utf16_length(caption) <= 100
+    end
+  end
+
+  describe "split/3" do
+    test "posts a title that fits as the caption" do
       entry = %Entry{title: "  A title \n", url: "https://youtu.be/x"}
 
-      assert Caption.for_entry(entry, %Setting{}) == "A title"
-      assert Caption.for_entry(%{entry | title: "x"}, %Setting{}) == nil
-      assert Caption.for_entry(%{entry | title: nil}, %Setting{}) == nil
+      assert Caption.split(entry, %Setting{}) == {"A title", nil}
+      assert Caption.split(%{entry | title: "x"}, %Setting{}) == {nil, nil}
+      assert Caption.split(%{entry | title: nil}, %Setting{}) == {nil, nil}
     end
 
-    test "is nil when titles aren't posted as captions" do
-      entry = %Entry{title: "A title", url: "https://youtu.be/x"}
-      assert Caption.for_entry(entry, %Setting{title_captions: false}) == nil
+    test "keeps a text exactly at the caption limit in the caption" do
+      title = String.duplicate("a", @limit - 2) <> "😀"
+      entry = %Entry{title: title, url: "https://youtu.be/x"}
+
+      assert Caption.split(entry, %Setting{}) == {title, nil}
+    end
+
+    test "sends a longer text whole as the follow-up instead of cutting it" do
+      title = Enum.map_join(1..60, "\n\n\n", &"Paragraph #{&1}: #{String.duplicate("🎣", 10)}")
+      assert utf16_length(title) > @limit
+      entry = %Entry{title: title, url: "https://www.instagram.com/p/C8xAbC/"}
+
+      assert {nil, follow_up} = Caption.split(entry, %Setting{})
+      assert follow_up == String.replace(title, "\n\n\n", "\n\n")
+      refute String.ends_with?(follow_up, "…")
+    end
+
+    test "cuts a text to the limit of a message" do
+      title = String.duplicate("😀", 3000)
+      entry = %Entry{title: title, url: "https://youtu.be/x"}
+
+      assert {nil, follow_up} = Caption.split(entry, %Setting{})
+      assert follow_up == String.duplicate("😀", 2047) <> "…"
+      assert utf16_length(follow_up) == 4096 - 1
+    end
+
+    test "with truncate_caption, also posts a longer text cut to fit the caption" do
+      title = Enum.map_join(1..60, "\n\n\n", &"Paragraph #{&1}: #{String.duplicate("🎣", 10)}")
+      entry = %Entry{title: title, url: "https://www.instagram.com/p/C8xAbC/"}
+      text = String.replace(title, "\n\n\n", "\n\n")
+
+      assert {caption, ^text} = Caption.split(entry, %Setting{}, truncate_caption: true)
+      assert caption == Caption.build(title)
+      assert String.ends_with?(caption, "…")
+      assert utf16_length(caption) <= @limit
+      assert String.starts_with?(text, String.trim_trailing(caption, "…"))
+
+      # A text that fits is only the caption, as without the option.
+      short = %{entry | title: "A title"}
+      assert Caption.split(short, %Setting{}, truncate_caption: true) == {"A title", nil}
+      assert Caption.split(entry, %Setting{}, truncate_caption: false) == {nil, text}
+    end
+
+    test "sends no text when titles aren't posted" do
+      entry = %Entry{title: String.duplicate("a", 2000), url: "https://youtu.be/x"}
+
+      assert Caption.split(entry, %Setting{title_captions: false}) == {nil, nil}
+
+      assert Caption.split(entry, %Setting{title_captions: false}, truncate_caption: true) ==
+               {nil, nil}
+
+      assert Caption.split(%{entry | title: "A title"}, %Setting{title_captions: false}) ==
+               {nil, nil}
     end
   end
 end

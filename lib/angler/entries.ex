@@ -192,9 +192,12 @@ defmodule Angler.Entries do
   @spec mark_done(Entry.t(), map()) :: Entry.t()
   defdelegate mark_done(entry, attrs \\ %{}), to: Queue
 
-  @doc "Marks an entry as permanently failed."
-  @spec mark_failed(Entry.t(), Entry.error_kind(), String.t()) :: Entry.t()
-  defdelegate mark_failed(entry, kind, message), to: Queue
+  @doc """
+  Marks an entry as permanently failed, optionally updating other fields in the
+  same write (e.g. the `media_items` of an album that was sent only in part).
+  """
+  @spec mark_failed(Entry.t(), Entry.error_kind(), String.t(), map()) :: Entry.t()
+  defdelegate mark_failed(entry, kind, message, attrs \\ %{}), to: Queue
 
   @doc """
   Puts an entry back into the queue to be retried after `delay_ms`.
@@ -208,7 +211,12 @@ defmodule Angler.Entries do
 
   ## Dashboard API
 
-  @doc "Re-queues a failed, cancelled or done entry from scratch."
+  @doc """
+  Re-queues a failed, cancelled or done entry from scratch. What an earlier
+  delivery left (an album's delivered items, the message replying to the link) is
+  forgotten: the album is sent whole again (see
+  `Angler.Pipeline.AlbumUpload.partly_delivered?/1`).
+  """
   @spec retry(Entry.t()) :: {:ok, Entry.t()} | {:error, :not_retryable}
   def retry(%Entry{id: id}) do
     now = DateTime.utc_now()
@@ -225,6 +233,8 @@ defmodule Angler.Entries do
              error: nil,
              error_kind: nil,
              stage_detail: nil,
+             media_items: [],
+             reply_message_id: nil,
              claimed_at: nil,
              started_at: nil,
              finished_at: nil,

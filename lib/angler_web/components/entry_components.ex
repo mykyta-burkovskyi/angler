@@ -1,8 +1,8 @@
 defmodule AnglerWeb.EntryComponents do
   @moduledoc """
   An entry as the entries list shows it: the entry row with its metadata, live
-  progress or error, and row actions, plus the host and title every page names an
-  entry by.
+  progress or error, and row actions, plus the host, title and album kind every
+  page names an entry by, and the confirmation before it is sent again.
 
   All components are styled with the design tokens from `assets/css/app.css`.
   """
@@ -14,7 +14,7 @@ defmodule AnglerWeb.EntryComponents do
   import AnglerWeb.PlatformComponents, only: [platform_tile: 1]
   import AnglerWeb.StatusComponents
 
-  alias Angler.Entries.Entry
+  alias Angler.Entries.{Entry, MediaItem}
   alias AnglerWeb.Format
 
   @doc "The host an entry's link points to, without a leading `www.`."
@@ -28,6 +28,47 @@ defmodule AnglerWeb.EntryComponents do
   @spec entry_title(Entry.t()) :: String.t()
   def entry_title(%Entry{title: title}) when is_binary(title) and title != "", do: title
   def entry_title(%Entry{url: url}), do: url
+
+  @doc """
+  What an album entry (`media_kind: :album`) is called: `"photo"` for a single
+  photo, else `"album"`; nil for any other entry.
+  """
+  @spec album_kind(Entry.t()) :: String.t() | nil
+  def album_kind(%Entry{media_kind: :album, media_items: [%MediaItem{type: :photo}]}), do: "photo"
+  def album_kind(%Entry{media_kind: :album}), do: "album"
+  def album_kind(%Entry{}), do: nil
+
+  @doc """
+  The question to confirm before an entry is sent again, or nil when sending it
+  again needs no confirmation: a delivered entry is posted to the chat again (an
+  album with all of its items), and so is an album of which some items were
+  already sent before it failed.
+  """
+  @spec retry_confirm(Entry.t()) :: String.t() | nil
+  def retry_confirm(%Entry{status: :done, media_kind: :album, media_items: items} = entry) do
+    case {album_kind(entry), length(items)} do
+      {"photo", _count} ->
+        "Download and send this photo to the chat again?"
+
+      {_album, count} when count > 1 ->
+        "Download and send all #{count} items of this album to the chat again?"
+
+      _unknown ->
+        "Download and send this whole album to the chat again?"
+    end
+  end
+
+  def retry_confirm(%Entry{status: :done}), do: "Download and send this to the chat again?"
+
+  def retry_confirm(%Entry{status: status, media_kind: :album, media_items: items})
+      when status in [:failed, :cancelled] do
+    case Enum.count(items, &MediaItem.delivered?/1) do
+      0 -> nil
+      sent -> "#{sent} of #{length(items)} items were already sent. Send the whole album again?"
+    end
+  end
+
+  def retry_confirm(%Entry{}), do: nil
 
   @doc """
   Renders one entry of the entries list: thumbnail (or platform tile), title
@@ -100,6 +141,13 @@ defmodule AnglerWeb.EntryComponents do
           >
             slideshow
           </span>
+          <span
+            :if={album_kind(@entry)}
+            data-role="album"
+            class="rounded bg-brand/10 px-1.5 py-px text-[11px] font-medium text-brand tabular-nums"
+          >
+            {album_chip(@entry)}
+          </span>
         </div>
 
         <.entry_state entry={@entry} progress={@progress} id={@id} />
@@ -114,7 +162,7 @@ defmodule AnglerWeb.EntryComponents do
           entry={@entry}
           icon="hero-arrow-path"
           label={if @entry.status == :done, do: "Send again", else: "Retry"}
-          confirm={@entry.status == :done && "Download and send this video to the chat again?"}
+          confirm={retry_confirm(@entry)}
         />
         <.row_action
           :if={Entry.cancellable?(@entry)}
@@ -138,6 +186,12 @@ defmodule AnglerWeb.EntryComponents do
     </li>
     """
   end
+
+  # "album · 7", or just "album" or "photo".
+  defp album_chip(%Entry{media_items: [_, _ | _] = items} = entry),
+    do: "#{album_kind(entry)} · #{length(items)}"
+
+  defp album_chip(%Entry{} = entry), do: album_kind(entry)
 
   defp sender(%Entry{chat_type: "private"}), do: nil
   defp sender(%Entry{from_name: name}) when is_binary(name) and name != "", do: name

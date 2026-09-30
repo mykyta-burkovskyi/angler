@@ -21,6 +21,14 @@ defmodule Angler.SettingsTest do
       assert Settings.host_allowed?(setting, Angler.Links.host("https://пример.рф/video"))
     end
 
+    test "allows Instagram's short host out of the box" do
+      setting = Settings.get()
+
+      for url <- ["https://instagr.am/p/DdwalmrkTSK/", "https://www.instagram.com/p/DdwalmrkTSK/"] do
+        assert Settings.host_allowed?(setting, Angler.Links.host(url))
+      end
+    end
+
     test "keeps the entry history for 90 days by default, and forever with 0" do
       assert Settings.get().history_days == 90
       assert {:ok, %Setting{history_days: 0}} = Settings.update(%{"history_days" => "0"})

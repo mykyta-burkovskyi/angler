@@ -1,24 +1,29 @@
 defmodule Angler.Pipeline do
   @moduledoc """
-  Broadway pipeline that turns queued entries into video replies.
+  Broadway pipeline that turns queued entries into replies with their media.
 
       Angler.Pipeline.Producer (claims due entries from Postgres, concurrency 1)
         └─ processors (:download_concurrency, max_demand 1): download + ffmpeg
-             └─ batcher :telegram (:upload_concurrency, batch_size 1): sendVideo
+             └─ batcher :telegram (:upload_concurrency, batch_size 1):
+                  sendVideo, or an album (sendMediaGroup / sendPhoto / sendVideo)
 
   Each message is one `Angler.Entries.Entry`; the steps live in
-  `Angler.Pipeline.Job` (processors) and `Angler.Pipeline.Upload` (batch
-  processors). The entries table is the source of truth: the steps move entries
-  through their statuses, and failed messages are retried or failed in
-  `handle_failed/2` (`Angler.Pipeline.Failures`, according to
-  `Angler.Pipeline.RetryPolicy`). Entries that were in progress when the node
-  stopped are queued again when the pipeline starts (or failed, with the usual
-  failure feedback, when they have no attempts left). With a local Bot API server
-  (`Angler.Telegram.Config.local_mode?/0`), entries a restart interrupted while
-  uploading are not sent again: the server keeps uploading on its own and posts the
-  video, so they fail like an upload Telegram never confirmed
-  (`Angler.Pipeline.Upload.settle_unconfirmed/2`). An upload that was still waiting
-  for its rate limiter slot when the node stopped is failed that way too.
+  `Angler.Pipeline.Job` (processors) and `Angler.Pipeline.Upload` /
+  `Angler.Pipeline.AlbumUpload` (batch processors). The entries table is the
+  source of truth: the steps move entries through their statuses, and failed
+  messages are retried or failed in `handle_failed/2` (`Angler.Pipeline.Failures`,
+  according to `Angler.Pipeline.RetryPolicy`). Entries that were in progress when
+  the node stopped are queued again when the pipeline starts (or failed, with the
+  usual failure feedback, when they have no attempts left). With a local Bot API
+  server (`Angler.Telegram.Config.local_mode?/0`), entries a restart interrupted
+  while uploading are not sent again: the server keeps uploading on its own and
+  posts the media, so they fail like an upload Telegram never confirmed
+  (`Angler.Pipeline.Delivery.settle_unconfirmed/2`). A post text too long for the
+  caption is not sent on its own then: the media, if it appears, carries it cut
+  to fit (see `Angler.Pipeline.Delivery.caption/1`). An upload that was still
+  waiting for its rate limiter slot when the node stopped is failed that way too.
+  An album a restart interrupted after part of it was delivered is never sent
+  again: it fails as sent in part (`Angler.Pipeline.AlbumUpload.finish_partial/3`).
 
   Configured under `config :angler, Angler.Pipeline` (options given to
   `start_link/1` take precedence):
@@ -33,8 +38,11 @@ defmodule Angler.Pipeline do
     * `:stale_after` - entries in progress without any sign of life for this long are
       recovered (ms, default 6 h, see `Angler.Pipeline.Producer`)
     * `:db_retry_delays` - delays (ms) between attempts to record an outcome while the
-      database can't be reached (defaults in `Angler.Pipeline.Upload` and
+      database can't be reached (defaults in `Angler.Pipeline.Delivery` and
       `Angler.Pipeline.DbRetry`; for tests)
+    * `:album_retry_delays` - delays (ms) between attempts to send a later part of an
+      album that Telegram refused without posting it (default in
+      `Angler.Pipeline.AlbumUpload.Sender`; for tests)
     * `:name` - the Broadway name (default `Angler.Pipeline`)
   """
   use Broadway
@@ -42,7 +50,8 @@ defmodule Angler.Pipeline do
   require Logger
 
   alias Angler.{Entries, Settings, Storage, Telegram}
-  alias Angler.Pipeline.{Failures, Feedback, Job, Producer, RetryPolicy, Upload}
+  alias Angler.Pipeline.{AlbumUpload, Delivery, Failures, Feedback, Job, Producer}
+  alias Angler.Pipeline.{RetryPolicy, Upload}
 
   @defaults [
     enabled: true,
@@ -128,7 +137,10 @@ defmodule Angler.Pipeline do
     [
       name: config[:name],
       shutdown: @shutdown,
-      context: Map.new(Keyword.take(config, [:media, :retry_base_delay, :db_retry_delays])),
+      context:
+        Map.new(
+          Keyword.take(config, [:media, :retry_base_delay, :db_retry_delays, :album_retry_delays])
+        ),
       producer: [
         module: {Producer, Keyword.take(config, [:poll_interval, :stale_after])},
         concurrency: 1
@@ -141,7 +153,7 @@ defmodule Angler.Pipeline do
 
   defp recover_orphaned do
     # A local Bot API server keeps uploading after the connection is gone and posts
-    # the video: sending it again would post it twice (see Angler.Telegram).
+    # the media: sending it again would post it twice (see Angler.Telegram).
     opts =
       if Telegram.Config.local_mode?(),
         do: [fail_uploads: {:telegram, RetryPolicy.unconfirmed_text()}],
@@ -151,7 +163,7 @@ defmodule Angler.Pipeline do
       Entries.recover_orphaned(opts)
 
     Enum.each(failed, fn entry -> after_restart(entry, &failed_by_restart/2) end)
-    Enum.each(unconfirmed, fn entry -> after_restart(entry, &Upload.settle_unconfirmed/2) end)
+    Enum.each(unconfirmed, fn entry -> after_restart(entry, &unconfirmed_by_restart/2) end)
 
     if requeued > 0 or failed != [] or unconfirmed != [] do
       Logger.info(
@@ -162,10 +174,25 @@ defmodule Angler.Pipeline do
     end
   end
 
-  # Like any failed entry: failure feedback in the chat, files deleted.
+  # Like any failed entry: failure feedback in the chat, files deleted. Unless part
+  # of its album is in the chat already.
   defp failed_by_restart(entry, settings) do
-    Feedback.failed(entry, :internal, settings)
-    Storage.purge(entry)
+    if AlbumUpload.partly_delivered?(entry) do
+      AlbumUpload.finish_partial(entry, settings, :interrupted)
+    else
+      Feedback.failed(entry, :internal, settings)
+      Storage.purge(entry)
+    end
+  end
+
+  # The media may still be posted, or may never have been sent: the post text
+  # that was to follow it is not sent on its own (see Angler.Pipeline.Delivery).
+  defp unconfirmed_by_restart(entry, settings) do
+    if AlbumUpload.partly_delivered?(entry) do
+      AlbumUpload.finish_partial(entry, settings, :unconfirmed)
+    else
+      Delivery.settle_unconfirmed(entry, settings)
+    end
   end
 
   defp after_restart(entry, fun) do

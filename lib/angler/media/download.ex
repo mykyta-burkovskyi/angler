@@ -1,17 +1,27 @@
 defmodule Angler.Media.Download do
   @moduledoc """
-  The result of downloading a link with yt-dlp, or the images and sound of a
-  TikTok slideshow (`Angler.Media.Slideshow`).
+  The result of downloading a link with yt-dlp, the images and sound of a TikTok
+  slideshow (`Angler.Media.Slideshow`), or the photos and videos of an Instagram
+  post (an album).
 
     * `:path` - absolute path of the downloaded media file
     * `:size` - bytes on disk
     * `:title`, `:extractor`, `:webpage_url` - from yt-dlp metadata (may be nil)
     * `:duration` - seconds (float) if known
     * `:width`, `:height`, `:video_codec`, `:audio_codec` - from yt-dlp metadata if known
-    * `:kind` - `:video`, or `:slideshow` for a TikTok photo post; then `:path` is the
-      directory holding `:images` (paths, in display order) and `:audio_path` (the
-      sound or nil), `:duration` is the sound's and `:max_duration` the longest
-      video to assemble (seconds, the download's `:max_duration` option, or nil)
+    * `:kind` - `:video | :slideshow | :album`:
+      * `:video` - a single media file at `:path`
+      * `:slideshow` - a TikTok photo post; `:path` is the directory holding `:images`
+        (paths, in display order) and `:audio_path` (the sound or nil), `:duration`
+        is the sound's and `:max_duration` the longest video to assemble (seconds,
+        the download's `:max_duration` option, or nil)
+      * `:album` - the photos and videos of a post, sent as they are; `:path` is the
+        `album` directory, `:size` the bytes of all items, `:title` the post text,
+        `:items` the items in display order and `:max_duration` the longest video
+        allowed (seconds or nil)
+    * `:items` - album items, each `%{type: :photo | :video, path: path, size: bytes,
+      width: w, height: h, duration: seconds}` (`path` is the item's source file,
+      `<dir>/album/NN/source.<ext>`; dimensions and duration may be nil)
   """
   @enforce_keys [:path, :size]
   defstruct [
@@ -28,8 +38,19 @@ defmodule Angler.Media.Download do
     :audio_path,
     :max_duration,
     kind: :video,
-    images: []
+    images: [],
+    items: []
   ]
+
+  @typedoc "An item of an album download, see the module documentation."
+  @type item :: %{
+          type: :photo | :video,
+          path: Path.t(),
+          size: non_neg_integer(),
+          width: pos_integer() | nil,
+          height: pos_integer() | nil,
+          duration: number() | nil
+        }
 
   @type t :: %__MODULE__{}
 end

@@ -166,8 +166,8 @@ defmodule Angler.LinksTest do
                "https://www.tiktok.com/@fisher/video/123?_r=1&_t=8abc&is_from_webapp=1&sender_device=pc&lang=en"
              ) == "https://www.tiktok.com/@fisher/video/123?lang=en"
 
-      assert Links.normalize("https://www.instagram.com/reel/C1x/?igsh=abc&img_index=2") ==
-               "https://www.instagram.com/reel/C1x/?img_index=2"
+      assert Links.normalize("https://www.instagram.com/reel/C1x/?igsh=abc&hl=en") ==
+               "https://www.instagram.com/reel/C1x/?hl=en"
 
       assert Links.normalize("https://example.com/v?fbclid=1&gclid=2&UTM_MEDIUM=3&id=7") ==
                "https://example.com/v?id=7"
@@ -190,6 +190,17 @@ defmodule Angler.LinksTest do
 
       assert Links.normalize("https://example.com/a?feature=beta") ==
                "https://example.com/a?feature=beta"
+    end
+
+    test "drops the viewed carousel item of Instagram links, which show the same post" do
+      assert Links.normalize("https://www.instagram.com/p/DdwalmrkTSK/?img_index=2") ==
+               "https://www.instagram.com/p/DdwalmrkTSK/"
+
+      assert Links.normalize("https://instagr.am/p/DdwalmrkTSK/?IMG_INDEX=3&igsh=x&hl=en") ==
+               "https://instagr.am/p/DdwalmrkTSK/?hl=en"
+
+      assert Links.normalize("https://example.com/gallery?img_index=2") ==
+               "https://example.com/gallery?img_index=2"
     end
 
     test "keeps valueless parameters and existing escapes" do

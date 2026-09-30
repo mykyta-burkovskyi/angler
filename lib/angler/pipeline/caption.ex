@@ -1,18 +1,22 @@
 defmodule Angler.Pipeline.Caption do
   @moduledoc """
-  The caption `Angler.Pipeline.Upload` posts with a video: the entry's title (the
-  YouTube title, the TikTok post text or slideshow caption, Instagram's "Video by
-  …", ...), when the `title_captions` setting is on.
+  The text posted with the media of an entry: its title (the YouTube title, the
+  TikTok or Instagram post text, ...), when the `title_captions` setting is on.
 
-  Captions are plain text: they are sent without `parse_mode`, so nothing in a
-  title is interpreted as formatting.
+  Text that fits Telegram's caption limit is the caption. Longer text (up to the
+  limit of a message) is sent as a separate message right after the media instead
+  of being cut (see `split/3`), once the media was delivered.
+
+  Texts are plain: they are sent without `parse_mode`, so nothing in a title is
+  interpreted as formatting.
   """
   alias Angler.Entries.Entry
   alias Angler.Settings.Setting
 
-  # Telegram's caption limit. Counted in UTF-16 code units (as Telegram counts
-  # entity offsets), which is never less than the number of characters.
-  @max_length 1024
+  # Telegram's caption and message limits. Counted in UTF-16 code units (as
+  # Telegram counts entity offsets), which is never less than the number of characters.
+  @caption_length 1024
+  @message_length 4096
   @ellipsis "…"
 
   # Control characters other than tab and newline.
@@ -23,14 +27,35 @@ defmodule Angler.Pipeline.Caption do
   @link ~r{^https?://\S+$}iu
 
   @doc """
-  The caption for `entry` with `settings`, or nil when titles aren't posted as
-  captions or the entry has no title worth posting (see `build/2`).
-  """
-  @spec for_entry(Entry.t(), Setting.t()) :: String.t() | nil
-  def for_entry(%Entry{} = entry, %Setting{title_captions: true}),
-    do: build(entry.title, entry.url)
+  The text of `entry` with `settings`, as `{caption, follow_up}`: the caption to
+  post with the media, and the text to send as a separate message after it.
 
-  def for_entry(%Entry{}, %Setting{}), do: nil
+  Text that fits a caption (#{@caption_length} UTF-16 code units) is the caption.
+  Longer text is the follow-up, cut to the limit of a message
+  (#{@message_length}), and the media goes without a caption, unless
+  `truncate_caption: true`: then its caption is the text cut to the caption limit
+  (ending with "#{@ellipsis}"), for media that may be posted without the
+  follow-up. Both are nil when titles aren't posted or the entry has no title
+  worth posting (see `build/3`).
+  """
+  @spec split(Entry.t(), Setting.t(), keyword()) :: {String.t() | nil, String.t() | nil}
+  def split(entry, settings, opts \\ [])
+
+  def split(%Entry{} = entry, %Setting{title_captions: true}, opts) do
+    case build(entry.title, entry.url, max_length: @message_length) do
+      nil ->
+        {nil, nil}
+
+      text ->
+        cond do
+          utf16_length(text) <= @caption_length -> {text, nil}
+          Keyword.get(opts, :truncate_caption, false) -> {truncate(text, @caption_length), text}
+          true -> {nil, text}
+        end
+    end
+  end
+
+  def split(%Entry{}, %Setting{}, _opts), do: {nil, nil}
 
   @doc """
   Turns the `title` of a video from `url` into a caption, or returns nil when there
@@ -43,19 +68,21 @@ defmodule Angler.Pipeline.Caption do
 
   Line breaks are normalized, control characters removed, trailing spaces of lines
   dropped, runs of blank lines collapsed into one and the whole text trimmed. A
-  caption longer than Telegram's limit (#{@max_length} UTF-16 code units) is cut on
-  a character (grapheme) boundary and ends with "#{@ellipsis}".
+  text longer than `:max_length` UTF-16 code units (default #{@caption_length},
+  Telegram's caption limit) is cut on a character (grapheme) boundary and ends
+  with "#{@ellipsis}".
   """
-  @spec build(String.t() | nil, String.t() | nil) :: String.t() | nil
-  def build(title, url \\ nil)
+  @spec build(String.t() | nil, String.t() | nil, keyword()) :: String.t() | nil
+  def build(title, url \\ nil, opts \\ [])
 
-  def build(title, url) when is_binary(title) do
+  def build(title, url, opts) when is_binary(title) do
     text = if String.valid?(title), do: normalize(title), else: ""
+    max_length = Keyword.get(opts, :max_length, @caption_length)
 
-    if text == "" or placeholder?(text, url), do: nil, else: truncate(text)
+    if text == "" or placeholder?(text, url), do: nil, else: truncate(text, max_length)
   end
 
-  def build(_title, _url), do: nil
+  def build(_title, _url, _opts), do: nil
 
   defp normalize(title) do
     title
@@ -104,11 +131,11 @@ defmodule Angler.Pipeline.Caption do
     ArgumentError -> []
   end
 
-  defp truncate(text) do
-    if utf16_length(text) <= @max_length do
+  defp truncate(text, max_length) do
+    if utf16_length(text) <= max_length do
       text
     else
-      budget = @max_length - utf16_length(@ellipsis)
+      budget = max_length - utf16_length(@ellipsis)
 
       kept =
         text

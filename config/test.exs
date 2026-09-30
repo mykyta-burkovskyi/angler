@@ -39,6 +39,10 @@ config :angler, Angler.Media.TikTok,
   req_options: [plug: {Req.Test, Angler.Media.TikTok}],
   retry_delays: [0, 0]
 
+config :angler, Angler.Media.Instagram,
+  req_options: [plug: {Req.Test, Angler.Media.Instagram}],
+  retry_delays: [0, 0]
+
 # Tests start pipelines and the storage janitor explicitly
 config :angler, Angler.Pipeline, enabled: false
 config :angler, Angler.Storage.Janitor, enabled: false

@@ -1,12 +1,13 @@
 defmodule AnglerWeb.EntryLive do
   @moduledoc """
   Everything about one entry: live status and progress, the full error, source,
-  Telegram and processing details, media information, stored files with a video
-  preview, and actions (retry, cancel, delete files, delete the entry).
+  Telegram and processing details, media information, stored files with a preview
+  (the video, or an album's photos and videos and its post text), and actions
+  (retry, cancel, delete files, delete the entry).
   """
   use AnglerWeb, :live_view
 
-  import AnglerWeb.EntryLive.{OverviewComponents, PanelComponents}
+  import AnglerWeb.EntryLive.{OverviewComponents, PanelComponents, PreviewComponents}
 
   alias Angler.{Entries, Storage}
   alias Angler.Entries.Entry
@@ -62,7 +63,13 @@ defmodule AnglerWeb.EntryLive do
   def handle_info(_message, socket), do: {:noreply, socket}
 
   defp assign_entry(socket, nil) do
-    assign(socket, entry: nil, page_title: "Entry not found", video_url: nil, thumbnail_url: nil)
+    assign(socket,
+      entry: nil,
+      page_title: "Entry not found",
+      video_url: nil,
+      thumbnail_url: nil,
+      album: []
+    )
   end
 
   defp assign_entry(socket, %Entry{} = entry) do
@@ -72,10 +79,33 @@ defmodule AnglerWeb.EntryLive do
       page_title: entry |> entry_title() |> Format.truncate(60),
       video_url: if(Storage.video_path(entry) != nil, do: ~p"/media/#{entry.id}/video"),
       thumbnail_url:
-        if(Storage.thumbnail_path(entry) != nil, do: ~p"/media/#{entry.id}/thumbnail")
+        if(Storage.thumbnail_path(entry) != nil, do: ~p"/media/#{entry.id}/thumbnail"),
+      album: album(entry)
     )
     |> update(:progress, &current_progress(entry, &1))
   end
+
+  # The items of an album with the URLs of their files on disk (the album_item type
+  # of PreviewComponents).
+  defp album(%Entry{media_kind: :album} = entry) do
+    for %{index: index, item: item, path: path, thumbnail_path: thumbnail} <-
+          Storage.media_items(entry) do
+      %{
+        index: index,
+        type: item_type(item.type, path),
+        url: if(path, do: ~p"/media/#{entry.id}/items/#{index}"),
+        thumbnail_url: if(thumbnail, do: ~p"/media/#{entry.id}/items/#{index}/thumbnail")
+      }
+    end
+  end
+
+  defp album(%Entry{}), do: []
+
+  # A file is shown the way AnglerWeb.MediaController serves it: by its name.
+  defp item_type(_type, path) when is_binary(path),
+    do: if(Path.extname(path) == ".mp4", do: :video, else: :photo)
+
+  defp item_type(type, nil), do: type
 
   # Acts on the current state of the entry, which may have changed since it was rendered.
   defp run_action(socket, action, done) do

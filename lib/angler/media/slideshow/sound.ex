@@ -15,8 +15,7 @@ defmodule Angler.Media.Slideshow.Sound do
   """
   require Logger
 
-  alias Angler.Media.{Error, Probe}
-  alias Angler.Media.Slideshow.Fetch
+  alias Angler.Media.{Error, Fetch, Probe}
   alias Angler.Media.TikTok.Post
 
   @max_bytes 50_000_000

@@ -5,9 +5,9 @@ defmodule Angler.Storage do
 
   Each entry's files live in its own directory; `entries.stored_bytes` mirrors how
   many bytes that directory holds so usage can be computed with a single query.
-  The final artifacts use the names from `output_paths/1`; anything else in an
-  entry directory is an intermediate (source download, 2-pass logs, partial files)
-  and is deleted by `finalize/2`.
+  The final artifacts use the names from `output_paths/1` (albums: the layout of
+  `Angler.Storage.Album`); anything else in an entry directory is an intermediate
+  (source download, 2-pass logs, partial files) and is deleted by `finalize/2`.
 
   Files of an entry that is not being processed are only deleted with the entry's
   row locked (`SELECT ... FOR UPDATE`) and read again: meanwhile the pipeline can't
@@ -26,7 +26,7 @@ defmodule Angler.Storage do
   alias Angler.Entries.Entry
   alias Angler.Repo
   alias Angler.Settings
-  alias Angler.Storage.{Cleanup, Disk, Janitor}
+  alias Angler.Storage.{Album, Cleanup, Disk, Janitor}
 
   @typedoc "What a cleanup run (`enforce_limits/0`) did."
   @type cleanup_result :: %{purged: non_neg_integer(), freed_bytes: non_neg_integer()}
@@ -86,8 +86,9 @@ defmodule Angler.Storage do
   end
 
   @doc """
-  Called after successful delivery: keeps only the final video and thumbnail,
-  deletes intermediates, updates `stored_bytes`, and purges right away when the
+  Called after successful delivery: keeps only the files in `keep` (the final
+  video and thumbnail, or an album's files, see `album_files/1`), deletes
+  intermediates, updates `stored_bytes`, and purges right away when the
   retention period is 0. Leaves the files alone if the entry is being processed
   again already.
 
@@ -160,6 +161,35 @@ defmodule Angler.Storage do
   @doc "Thumbnail of a delivered entry, if still on disk."
   @spec thumbnail_path(Entry.t()) :: Path.t() | nil
   def thumbnail_path(%Entry{} = entry), do: existing_output(entry, :thumbnail)
+
+  ## Albums
+
+  @doc """
+  The items of an album entry (`Angler.Entries.MediaItem`, in display order), each
+  as `%{index: index, item: item, path: path, thumbnail_path: path}`: `index`
+  counts from 0 and the paths are absolute, or nil unless the file is on disk and
+  its stored path is valid (see `Angler.Storage.Album`).
+  """
+  @spec media_items(Entry.t()) :: [Album.item()]
+  defdelegate media_items(entry), to: Album
+
+  @doc """
+  The file of the album item at `index` (from 0), if it is on disk and its stored
+  path is valid (see `Angler.Storage.Album`); nil for any other index.
+  """
+  @spec media_item_path(Entry.t(), integer()) :: Path.t() | nil
+  defdelegate media_item_path(entry, index), to: Album
+
+  @doc "Like `media_item_path/2`, for the item's thumbnail (videos only)."
+  @spec media_item_thumbnail_path(Entry.t(), integer()) :: Path.t() | nil
+  defdelegate media_item_thumbnail_path(entry, index), to: Album
+
+  @doc """
+  The files an album entry keeps (`finalize/2`): its items' files and thumbnails
+  and the cover thumbnail, as far as they are on disk and valid.
+  """
+  @spec album_files(Entry.t()) :: [Path.t()]
+  defdelegate album_files(entry), to: Album
 
   @doc """
   Storage usage for the dashboard. `used_bytes` and `entries_with_files` cover the

@@ -4,7 +4,7 @@ defmodule Angler.EntriesTest do
   import Angler.TelegramFixtures
 
   alias Angler.Entries
-  alias Angler.Entries.Entry
+  alias Angler.Entries.{Entry, MediaItem}
 
   describe "update!/2" do
     test "changes a claimed entry while it is held by the same claim" do
@@ -76,6 +76,28 @@ defmodule Angler.EntriesTest do
     end
   end
 
+  describe "retry/1" do
+    test "forgets what an earlier delivery left, so an album is sent whole again" do
+      items = [
+        MediaItem.new(%{type: :photo, path: "album/01/photo.jpg", file_id: "AgAC1"}),
+        MediaItem.new(%{type: :video, path: "album/02/video.mp4", file_id: "BAAC2"})
+      ]
+
+      done =
+        Entries.mark_done(claimed_entry(), %{
+          media_kind: :album,
+          media_items: items,
+          reply_message_id: 501
+        })
+
+      assert {:ok, %Entry{status: :queued, attempts: 0, media_kind: :album} = requeued} =
+               Entries.retry(done)
+
+      assert %Entry{media_items: [], reply_message_id: nil} = requeued
+      assert %Entry{media_items: [], reply_message_id: nil} = Entries.get(done.id)
+    end
+  end
+
   describe "schedule_retry/5" do
     test "counts the attempt by default, or gives it back" do
       entry = claimed_entry()
@@ -88,6 +110,48 @@ defmodule Angler.EntriesTest do
 
       assert %Entry{status: :queued, attempts: 1, error: "429"} =
                Entries.schedule_retry(entry, :transient, "429", 0, count_attempt: false)
+    end
+  end
+
+  describe "mark_failed/4" do
+    test "fails the entry, updating other fields in the same write" do
+      entry = claimed_entry()
+      items = [MediaItem.new(%{type: :photo, path: "album/01/photo.jpg", file_id: "FILE"})]
+
+      assert %Entry{
+               status: :failed,
+               error_kind: :telegram,
+               error: "Only 1 of 2 items were sent",
+               claimed_at: nil,
+               finished_at: %DateTime{},
+               media_kind: :album,
+               media_items: ^items
+             } =
+               Entries.mark_failed(entry, :telegram, "Only 1 of 2 items were sent", %{
+                 media_kind: :album,
+                 media_items: items
+               })
+
+      assert %Entry{status: :failed, media_kind: :album, media_items: ^items} =
+               Entries.get(entry.id)
+    end
+
+    test "changes nothing else without attrs" do
+      entry = Entries.update!(claimed_entry(), %{title: "Fish"})
+
+      assert %Entry{status: :failed, error_kind: :unavailable, error: "gone", title: "Fish"} =
+               Entries.mark_failed(entry, :unavailable, "gone")
+
+      assert %Entry{media_items: []} = Entries.get(entry.id)
+    end
+
+    test "is refused once the entry's claim changed, like every update" do
+      lost = claimed_entry()
+      Entries.schedule_retry(lost, :internal, "Worker lost", 0)
+
+      assert_raise Ecto.StaleEntryError, fn ->
+        Entries.mark_failed(lost, :telegram, "partial", %{media_items: []})
+      end
     end
   end
 

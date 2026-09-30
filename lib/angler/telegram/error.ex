@@ -9,8 +9,9 @@ defmodule Angler.Telegram.Error do
     * `:migrate_to_chat_id` - from `parameters.migrate_to_chat_id` (group upgraded to supergroup)
     * `:reason` - the underlying transport exception/term for network errors, else nil
     * `:request_sent` - for transport errors of calls made with `track_sent: true`
-      (`Angler.Telegram.send_video/3`): whether the whole request had been sent
-      before the error, so Telegram may have carried it out
+      (the uploads `Angler.Telegram.send_video/3`, `send_photo/3` and
+      `send_media_group/3`): whether the whole request had been sent before the
+      error, so Telegram may have carried it out
   """
   defexception [
     :method,

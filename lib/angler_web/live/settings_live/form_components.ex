@@ -74,10 +74,10 @@ defmodule AnglerWeb.SettingsLive.FormComponents do
   def storage_hint(value) do
     case to_integer(value) do
       mb when is_integer(mb) and mb > 0 ->
-        "#{Format.bytes(mb * 1_000_000)}. When kept videos exceed it, the oldest are removed first."
+        "#{Format.bytes(mb * 1_000_000)}. When kept files exceed it, the oldest are removed first."
 
       _ ->
-        "When kept videos exceed it, the oldest are removed first."
+        "When kept files exceed it, the oldest are removed first."
     end
   end
 
@@ -86,13 +86,13 @@ defmodule AnglerWeb.SettingsLive.FormComponents do
   def retention_hint(value) do
     case to_integer(value) do
       0 ->
-        "Delivered videos are deleted right after sending."
+        "Delivered media is deleted right after sending."
 
       hours when is_integer(hours) and hours > 0 ->
-        "About #{Format.elapsed(hours * 3600)}. 0 deletes videos right after sending."
+        "About #{Format.elapsed(hours * 3600)}. 0 deletes files right after sending."
 
       _ ->
-        "0 deletes videos right after sending."
+        "0 deletes files right after sending."
     end
   end
 

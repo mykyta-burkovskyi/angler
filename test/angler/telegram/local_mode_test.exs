@@ -57,6 +57,64 @@ defmodule Angler.Telegram.LocalModeTest do
     assert String.starts_with?(params["video"], "file:///")
   end
 
+  @tag :tmp_dir
+  test "send_photo/3 and send_media_group/3 pass local files as file:// URIs",
+       %{chat_id: chat_id, tmp_dir: dir} do
+    dir = Path.join(dir, "entry dir")
+    File.mkdir_p!(dir)
+
+    [photo, video, thumbnail] =
+      for name <- ~w(photo.jpg video.mp4 thumbnail.jpg), do: Path.join(dir, name)
+
+    for path <- [photo, video, thumbnail], do: File.write!(path, "bytes")
+    uri = &("file://" <> String.replace(&1, " ", "%20"))
+
+    stub_bot_api(%{
+      "sendPhoto" => sent_photo(chat_id),
+      "sendMediaGroup" => sent_media_group(chat_id, [:photo, :video, :video])
+    })
+
+    assert {:ok, _} = Telegram.send_photo(chat_id, {:path, photo}, caption: "Post")
+    assert_received {:bot_api, "sendPhoto", params}
+    assert params == %{"chat_id" => chat_id, "photo" => uri.(photo), "caption" => "Post"}
+
+    # Another chat: the photo holds this one back for the chat interval.
+    album_chat_id = unique_id()
+
+    items = [
+      %{type: :photo, media: {:path, photo}, thumbnail: thumbnail},
+      %{
+        type: :video,
+        media: {:path, video},
+        thumbnail: thumbnail,
+        width: 720,
+        height: 1280,
+        duration: 12
+      },
+      %{type: :video, media: {:file_id, "BAAC"}, thumbnail: thumbnail}
+    ]
+
+    assert {:ok, [_, _, _]} = Telegram.send_media_group(album_chat_id, items, caption: "Album")
+    assert_received {:bot_api, "sendMediaGroup", params}
+
+    assert params == %{
+             "chat_id" => album_chat_id,
+             "media" => [
+               %{"type" => "photo", "media" => uri.(photo), "caption" => "Album"},
+               %{
+                 "type" => "video",
+                 "media" => uri.(video),
+                 "thumbnail" => uri.(thumbnail),
+                 "width" => 720,
+                 "height" => 1280,
+                 "duration" => 12,
+                 "supports_streaming" => true
+               },
+               %{"type" => "video", "media" => "BAAC", "supports_streaming" => true}
+             ]
+           }
+  end
+
   test "log_out_from_cloud/0 ignores the configured server" do
     test = self()
 

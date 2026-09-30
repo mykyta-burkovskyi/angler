@@ -4,7 +4,7 @@ defmodule Angler.Pipeline.ProducerTest do
   import Angler.TelegramFixtures
 
   alias Angler.Entries
-  alias Angler.Entries.Entry
+  alias Angler.Entries.{Entry, MediaItem}
   alias Angler.Pipeline.Producer
   alias Broadway.Message
 
@@ -137,6 +137,34 @@ defmodule Angler.Pipeline.ProducerTest do
 
       assert_receive {:bot_api, "sendMessage",
                       %{"reply_parameters" => %{"message_id" => ^exhausted_message_id}}},
+                     @timeout
+    end
+
+    @tag :capture_log
+    test "fails an album of which a part was delivered as sent in part" do
+      [album] = enqueue(1)
+      [claimed] = Entries.claim(1)
+
+      items = [
+        MediaItem.new(%{type: :photo, path: "album/01/photo.jpg", file_id: "AgAC1"}),
+        MediaItem.new(%{type: :photo, path: "album/02/photo.jpg"})
+      ]
+
+      Entries.update!(claimed, %{
+        status: :uploading,
+        attempts: 3,
+        media_kind: :album,
+        media_items: items
+      })
+
+      silence([album], -7)
+
+      assert Producer.recover_stale(:timer.hours(6)) == {0, 1}
+
+      assert %Entry{status: :failed, error_kind: :telegram, error: error} = Entries.get(album.id)
+      assert error == "Only 1 of 2 items were sent: the upload was interrupted"
+
+      assert_receive {:bot_api, "sendMessage", %{"text" => "Only 1 of 2 items could be sent."}},
                      @timeout
     end
 

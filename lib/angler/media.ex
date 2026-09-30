@@ -1,6 +1,8 @@
 defmodule Angler.Media do
   @moduledoc """
-  Turns a link into a Telegram-ready video file using yt-dlp, ffprobe and ffmpeg.
+  Turns a link into Telegram-ready media using yt-dlp, ffprobe and ffmpeg: a video
+  (also a TikTok photo slideshow rendered as one), or the photos and videos of an
+  Instagram post as an album.
 
   The pipeline calls the implementation configured as
   `config :angler, Angler.Pipeline, media: module` (defaults to this module), so tests
@@ -11,7 +13,8 @@ defmodule Angler.Media do
     * `:data_dir` - persistent data directory; yt-dlp and deno cache under `cache/`,
       the self-updating yt-dlp copy lives in `bin/`
     * `:ytdlp_path`, `:ffmpeg_path`, `:ffprobe_path` - executables (paths or names in `PATH`)
-    * `:cookies_file` - optional Netscape cookies file passed to yt-dlp
+    * `:cookies_file` - optional Netscape cookies file passed to yt-dlp, and used as
+      a logged-in fallback for TikTok post pages (see `Angler.Media.Cookies`)
     * `:ytdlp_update_channel` - `nil`, `"stable"` or `"nightly"`, see `Angler.Media.Updater`
     * `:allow_private_networks` - let downloads reach loopback and private network
       addresses (default `false`), see `Angler.Media.EgressProxy`
@@ -20,13 +23,12 @@ defmodule Angler.Media do
   takes too long or when the calling process dies.
 
   This module is the behaviour and its entry point; the work is done by
-  `Angler.Media.Ytdlp` and `Angler.Media.Slideshow` (downloads),
+  `Angler.Media.Route` (which picks one of `Angler.Media.Ytdlp`,
+  `Angler.Media.Slideshow` and `Angler.Media.Album` for a link),
   `Angler.Media.Prepare` (making videos Telegram-ready) and `Angler.Media.Tools`
   (tool versions). It also holds helpers shared by the `Angler.Media.*` modules.
   """
-  alias Angler.Media.{Download, Error, Output, Prepare, Probe, Tools, Updater, Ytdlp}
-  alias Angler.Media.{Slideshow, TikTok}
-  alias Angler.Media.Ytdlp.Outcome
+  alias Angler.Media.{Album, Download, Error, Output, Prepare, Route, Slideshow, Tools, Updater}
 
   @typedoc """
   Called with progress updates, e.g. `%{percent: 42.5, detail: "3.1MiB/s, ETA 00:12"}`.
@@ -35,7 +37,7 @@ defmodule Angler.Media do
   @type progress_fun :: (%{percent: float() | nil, detail: String.t() | nil} -> any())
 
   @doc """
-  Downloads the video behind `url` into directory `dir` (which exists and is empty).
+  Downloads the media behind `url` into directory `dir` (which exists and is empty).
 
   Options:
     * `:max_source_bytes` - refuse sources larger than this (`kind: :too_large`),
@@ -45,7 +47,8 @@ defmodule Angler.Media do
       downloading by measuring the file
     * `:target_bytes` - the upload limit; prefer formats that already fit it
     * `:final_attempt` - false when a `:transient` failure will be retried (default
-      true); slideshows then fail rather than leave out files the CDN refused
+      true); slideshows and albums then fail rather than leave out files the CDN
+      refused
     * `:on_progress` - `t:progress_fun/0`
   """
   @callback download(url :: String.t(), dir :: Path.t(), opts :: keyword()) ::
@@ -57,6 +60,10 @@ defmodule Angler.Media do
   using the file names from `Angler.Storage.output_paths/1` for the final video and
   thumbnail (the source file may be moved there when it already fits).
 
+  An album (`%Download{kind: :album}`) becomes an `%Output{kind: :album}` instead:
+  its photos and videos, each at most `:target_bytes` large, and a cover thumbnail
+  (see `Angler.Media.Output`).
+
   Options:
     * `:target_bytes` (required)
     * `:on_progress` - `t:progress_fun/0`
@@ -66,56 +73,23 @@ defmodule Angler.Media do
 
   @behaviour __MODULE__
 
-  @duration_tolerance 1
-
   @doc """
-  Downloads with yt-dlp, see `c:download/3` and `Angler.Media.Ytdlp.download/3`.
-  TikTok links are resolved first (`Angler.Media.TikTok.route/1`): photo posts are
-  downloaded as slideshows (`Angler.Media.Slideshow.download/3`), other TikTok
-  videos go to yt-dlp with their canonical URL.
+  Downloads the media behind `url`, see `c:download/3` and `Angler.Media.Route`:
+  Instagram posts with photos or several items are albums
+  (`Angler.Media.Album.download/3`), TikTok photo posts slideshows
+  (`Angler.Media.Slideshow.download/3`), and everything else goes to yt-dlp
+  (`Angler.Media.Ytdlp.download/3`), with the canonical URL of a TikTok video and
+  the post text of an Instagram video as its title.
 
   yt-dlp refuses videos longer than `:max_duration` only when the site reports the
-  duration (logged-out Instagram, direct links and HLS playlists often do not), and
-  what it reports can be wrong (for HLS it adds up the durations the playlist
-  claims). So when there is a limit, the downloaded file is measured with ffprobe,
-  checked, and its measured duration returned.
+  duration, and what it reports can be wrong. So when there is a limit, the
+  downloaded file is measured with ffprobe, checked, and its measured duration
+  returned.
 
   Also accepts `:timeout` (milliseconds, default 30 minutes).
   """
   @impl true
-  def download(url, dir, opts) do
-    case TikTok.route(url) do
-      {:ytdlp, url} ->
-        with {:ok, download} <- Ytdlp.download(url, dir, opts) do
-          check_duration(download, Keyword.get(opts, :max_duration))
-        end
-
-      {:slideshow, post} ->
-        Slideshow.download(post, dir, opts)
-
-      {:error, error} ->
-        {:error, error}
-    end
-  end
-
-  defp check_duration(download, max_duration) when not is_number(max_duration),
-    do: {:ok, download}
-
-  defp check_duration(download, max_duration) do
-    download =
-      case Probe.run(download.path) do
-        {:ok, %Probe{duration: duration}} when is_number(duration) ->
-          %{download | duration: duration}
-
-        # yt-dlp's duration is kept; prepare/3 reports files ffprobe cannot read.
-        _other ->
-          download
-      end
-
-    if is_number(download.duration) and download.duration > max_duration + @duration_tolerance,
-      do: {:error, Error.new(:too_large, Outcome.too_long_message(max_duration))},
-      else: {:ok, download}
-  end
+  def download(url, dir, opts), do: Route.download(url, dir, opts)
 
   @doc """
   Probes the download, picks the cheapest way to make it Telegram-ready
@@ -127,11 +101,15 @@ defmodule Angler.Media do
 
   On success the source file and the encoder's pass logs are removed; on failure
   intermediates stay in `dir` (the storage subsystem cleans the directory).
-  Slideshows are assembled by `Angler.Media.Slideshow.prepare/3`.
+  Slideshows are assembled by `Angler.Media.Slideshow.prepare/3`, albums prepared
+  item by item by `Angler.Media.Album.prepare/3`.
   """
   @impl true
   def prepare(%Download{kind: :slideshow} = download, dir, opts),
     do: Slideshow.prepare(download, dir, opts)
+
+  def prepare(%Download{kind: :album} = download, dir, opts),
+    do: Album.prepare(download, dir, opts)
 
   def prepare(%Download{} = download, dir, opts), do: Prepare.run(download, dir, opts)
 

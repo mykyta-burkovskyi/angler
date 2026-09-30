@@ -9,7 +9,10 @@ defmodule Angler.Media.TikTok do
     1. recognizes the post id, following short links (`vm.`/`vt.tiktok.com/<code>`,
        `tiktok.com/t/<code>`) with one request that reads the redirect location
     2. loads `https://www.tiktok.com/@/video/<id>` and reads the post from the page
-       (`Angler.Media.TikTok.Page`, which also solves TikTok's proof-of-work page)
+       (`Angler.Media.TikTok.Page`, which also solves TikTok's proof-of-work page,
+       and loads it once more with the cookies file when TikTok hides the post
+       from logged-out visitors or the page can't be read; short links are always
+       followed without cookies)
     3. classifies it: a post with images is a slideshow (`Angler.Media.TikTok.Post`,
        assembled into a video by `Angler.Media.Slideshow`); anything else is a video
        whose canonical `/video/` URL goes to yt-dlp

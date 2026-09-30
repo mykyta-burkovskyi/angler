@@ -1,12 +1,15 @@
 defmodule AnglerWeb.MediaController do
   @moduledoc """
   Serves a delivered entry's video (with HTTP Range support, for seeking in the
-  browser) and thumbnail from local storage, for previews on the dashboard.
+  browser) and thumbnail from local storage, for previews on the dashboard, and
+  the photos, videos and video thumbnails of an album entry.
 
   Only single byte ranges are supported (`bytes=first-last`, `bytes=first-` and the
   suffix form `bytes=-length`); a Range header this controller doesn't understand
   (another unit, several ranges, malformed) is ignored and the whole file is sent,
-  as HTTP allows. Only files inside `Angler.Storage.root/0` are ever served.
+  as HTTP allows. Only files inside `Angler.Storage.root/0` are ever served, and
+  paths never come from the request: an album item is picked by its index among
+  the entry's stored items (`Angler.Storage.media_item_path/2`).
   """
   use AnglerWeb, :controller
 
@@ -14,32 +17,52 @@ defmodule AnglerWeb.MediaController do
   alias Angler.Entries.Entry
   alias Angler.Storage
 
+  # The photo formats an album may hold (see Angler.Storage.Album).
+  @image_types %{".jpg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp"}
+
   @doc "Sends an entry's final video, honouring a single-range `Range` header."
   def video(conn, %{"id" => id}) do
     case stored_file(id, &Storage.video_path/1) do
-      {:ok, path, size} ->
-        conn
-        |> put_resp_content_type("video/mp4", nil)
-        |> put_resp_header("accept-ranges", "bytes")
-        |> send_range(path, size, requested_range(conn, size))
-
-      :error ->
-        not_found(conn)
+      {:ok, path, size} -> send_video(conn, path, size)
+      :error -> not_found(conn)
     end
   end
 
   @doc "Sends an entry's thumbnail (cacheable by the browser for an hour)."
   def thumbnail(conn, %{"id" => id}) do
     case stored_file(id, &Storage.thumbnail_path/1) do
-      {:ok, path, _size} ->
-        conn
-        |> put_resp_content_type("image/jpeg", nil)
-        |> put_resp_header("cache-control", "private, max-age=3600")
-        |> send_file(200, path)
-
-      :error ->
-        not_found(conn)
+      {:ok, path, _size} -> send_image(conn, path, "image/jpeg")
+      :error -> not_found(conn)
     end
+  end
+
+  @doc """
+  Sends an item of an album entry, by its index (from 0): a video like `video/2`,
+  a photo like `thumbnail/2`, each with the content type of its file.
+  """
+  def item(conn, %{"id" => id, "index" => index}) do
+    with {:ok, index} <- parse_index(index),
+         {:ok, path, size} <- stored_file(id, &Storage.media_item_path(&1, index)) do
+      send_item(conn, path, size)
+    else
+      :error -> not_found(conn)
+    end
+  end
+
+  @doc "Sends the thumbnail of an album entry's video item, like `thumbnail/2`."
+  def item_thumbnail(conn, %{"id" => id, "index" => index}) do
+    with {:ok, index} <- parse_index(index),
+         {:ok, path, _size} <- stored_file(id, &Storage.media_item_thumbnail_path(&1, index)) do
+      send_image(conn, path, "image/jpeg")
+    else
+      :error -> not_found(conn)
+    end
+  end
+
+  # Plain digits only: no sign, space, fraction or anything else Integer.parse/1
+  # would let through. An album has at most 20 items.
+  defp parse_index(index) do
+    if Regex.match?(~r/\A\d{1,2}\z/, index), do: {:ok, String.to_integer(index)}, else: :error
   end
 
   defp stored_file(id, path_fun) do
@@ -51,6 +74,31 @@ defmodule AnglerWeb.MediaController do
     else
       _ -> :error
     end
+  end
+
+  # The content type follows the file's name, which Angler.Storage.Album checked.
+  defp send_item(conn, path, size) do
+    extension = Path.extname(path)
+
+    cond do
+      extension == ".mp4" -> send_video(conn, path, size)
+      type = @image_types[extension] -> send_image(conn, path, type)
+      true -> not_found(conn)
+    end
+  end
+
+  defp send_video(conn, path, size) do
+    conn
+    |> put_resp_content_type("video/mp4", nil)
+    |> put_resp_header("accept-ranges", "bytes")
+    |> send_range(path, size, requested_range(conn, size))
+  end
+
+  defp send_image(conn, path, content_type) do
+    conn
+    |> put_resp_content_type(content_type, nil)
+    |> put_resp_header("cache-control", "private, max-age=3600")
+    |> send_file(200, path)
   end
 
   defp send_range(conn, path, _size, :all), do: send_file(conn, 200, path)

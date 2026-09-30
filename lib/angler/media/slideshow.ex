@@ -19,8 +19,8 @@ defmodule Angler.Media.Slideshow do
   require Logger
 
   alias Angler.Media
-  alias Angler.Media.{Download, Error}
-  alias Angler.Media.Slideshow.{Fetch, Render, Sound}
+  alias Angler.Media.{Download, Error, Fetch}
+  alias Angler.Media.Slideshow.{Render, Sound}
   alias Angler.Media.TikTok.Post
 
   @max_images 35

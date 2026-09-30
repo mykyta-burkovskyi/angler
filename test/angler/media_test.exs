@@ -89,6 +89,99 @@ defmodule Angler.MediaTest do
     end
   end
 
+  describe "download/3 of Instagram posts" do
+    @describetag :tmp_dir
+    @describetag :capture_log
+
+    @cdn "https://scontent-iev1-1.cdninstagram.com"
+
+    # Instagram's logged-out GraphQL answer for the post, and its CDN.
+    defp stub_instagram(media) do
+      Req.Test.stub(Angler.Media.Instagram, fn conn ->
+        case {conn.method, conn.host, conn.request_path} do
+          {"POST", "www.instagram.com", "/api/graphql"} ->
+            answer = %{"data" => %{"xig_polaris_media" => %{"if_not_gated_logged_out" => media}}}
+
+            conn
+            |> Plug.Conn.put_resp_content_type("text/javascript")
+            |> Plug.Conn.send_resp(200, Jason.encode!(answer))
+
+          {"GET", "scontent-iev1-1.cdninstagram.com", path} ->
+            Plug.Conn.send_resp(conn, 200, Path.basename(path))
+        end
+      end)
+    end
+
+    test "downloads a post with photos as an album", %{tmp_dir: dir} do
+      stub_instagram(%{
+        "code" => "DduKfFmDxsG",
+        "media_type" => 8,
+        "caption" => %{"text" => "Hello from the post"},
+        "user" => %{"username" => "instagram"},
+        "carousel_media" => [
+          %{
+            "media_type" => 1,
+            "image_versions2" => %{"candidates" => [%{"url" => "#{@cdn}/v/t51/1.jpg?oh=a"}]}
+          },
+          %{
+            "media_type" => 2,
+            "video_versions" => [%{"type" => 101, "url" => "#{@cdn}/o1/v/t16/2.mp4?oh=b"}]
+          }
+        ]
+      })
+
+      assert {:ok, %Download{kind: :album, items: [photo, video]} = download} =
+               Media.download("https://www.instagram.com/p/DduKfFmDxsG/", dir,
+                 max_source_bytes: 1_000_000,
+                 max_duration: 600
+               )
+
+      assert %Download{
+               title: "Hello from the post",
+               extractor: "Instagram",
+               webpage_url: "https://www.instagram.com/p/DduKfFmDxsG/",
+               max_duration: 600,
+               size: 10
+             } = download
+
+      assert {photo.type, File.read!(photo.path)} == {:photo, "1.jpg"}
+      assert {video.type, File.read!(video.path)} == {:video, "2.mp4"}
+    end
+  end
+
+  # Without a readable photo for ffmpeg there is no cover: that is logged.
+  @tag :tmp_dir
+  @tag :capture_log
+  test "prepare/3 prepares albums item by item", %{tmp_dir: dir} do
+    item_dir = Path.join([dir, "album", "01"])
+    File.mkdir_p!(item_dir)
+    source = Path.join(item_dir, "source.jpg")
+    png = <<0x89, "PNG\r\n", 0x1A, "\n", 13::32, "IHDR", 640::32, 480::32, 8, 2, 0, 0, 0, 0::32>>
+    File.write!(source, png)
+
+    download = %Download{
+      kind: :album,
+      path: Path.join(dir, "album"),
+      size: byte_size(png),
+      items: [
+        %{
+          type: :photo,
+          path: source,
+          size: byte_size(png),
+          width: nil,
+          height: nil,
+          duration: nil
+        }
+      ]
+    }
+
+    assert {:ok, %Output{kind: :album, width: 640, height: 480, items: [photo]}} =
+             Media.prepare(download, dir, target_bytes: 50_000_000)
+
+    assert photo.path == Path.join(item_dir, "photo.png")
+    assert File.read!(photo.path) == png
+  end
+
   describe "prepare/3" do
     @describetag :external
     @describetag :tmp_dir

@@ -31,6 +31,8 @@ defmodule AnglerWeb.Router do
 
     get "/media/:id/video", MediaController, :video
     get "/media/:id/thumbnail", MediaController, :thumbnail
+    get "/media/:id/items/:index", MediaController, :item
+    get "/media/:id/items/:index/thumbnail", MediaController, :item_thumbnail
 
     live_session :dashboard, on_mount: AnglerWeb.DashboardAuth do
       live "/", EntriesLive, :index

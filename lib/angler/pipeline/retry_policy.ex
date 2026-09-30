@@ -46,7 +46,7 @@ defmodule Angler.Pipeline.RetryPolicy do
   @jitter 0.2
   @postpone_window :timer.hours(24)
   @low_disk_space_delay 300
-  @unconfirmed_text "Telegram did not confirm the upload in time; the video may still appear in the chat"
+  @unconfirmed_text "Telegram did not confirm the upload in time; it may still appear in the chat"
 
   @doc "Whether failures of this kind are retried automatically."
   @spec retryable?(kind()) :: boolean()
@@ -149,12 +149,13 @@ defmodule Angler.Pipeline.RetryPolicy do
     do: {normalize_kind(kind), to_text(message || "Media processing failed")}
 
   @doc """
-  The failure for a failed `sendVideo`. `reused_file_id?` tells whether the video
-  was sent by the `file_id` of an earlier delivery: when Telegram rejects that
-  file, the entry is postponed by 0 seconds (and downloads the video again).
+  The failure for a failed upload (a video, or the first part of an album).
+  `reused_file_id?` tells whether the video was sent by the `file_id` of an
+  earlier delivery: when Telegram rejects that file, the entry is postponed by 0
+  seconds (and downloads the video again).
 
   A request that was sent but never answered (`:unconfirmed`) may still have
-  posted the video, so it fails for good instead of being sent twice.
+  posted the media, so it fails for good instead of being sent twice.
   """
   @spec telegram_failure(TelegramError.t(), boolean()) :: failure()
   def telegram_failure(%TelegramError{} = error, reused_file_id?) do
@@ -187,6 +188,23 @@ defmodule Angler.Pipeline.RetryPolicy do
   @doc "What an entry whose upload Telegram never confirmed fails with."
   @spec unconfirmed_text() :: String.t()
   def unconfirmed_text, do: @unconfirmed_text
+
+  @doc """
+  What an album fails with when only `sent` of its `total` items were sent (a later
+  part failed for `reason`, or its upload was interrupted). The rest is never sent
+  again: that would post the first part twice.
+  """
+  @spec partial_text(non_neg_integer(), non_neg_integer(), String.t() | nil) :: String.t()
+  def partial_text(sent, total, nil), do: "Only #{sent} of #{total} items were sent"
+  def partial_text(sent, total, reason), do: partial_text(sent, total, nil) <> ": " <> reason
+
+  @doc """
+  What an album fails with when Telegram confirmed `sent` of its `total` items, but
+  not the upload of a later part, which may still appear in the chat.
+  """
+  @spec partial_unconfirmed_text(non_neg_integer(), non_neg_integer()) :: String.t()
+  def partial_unconfirmed_text(sent, total),
+    do: "#{sent} of #{total} items were confirmed; the rest may still appear in the chat"
 
   defp normalize_kind(kind) do
     if kind in Entry.error_kinds(), do: kind, else: :internal

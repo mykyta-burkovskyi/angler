@@ -21,13 +21,19 @@ defmodule Angler.Telegram.RateLimiterTest do
     %{clock: clock, server: name, pid: pid}
   end
 
-  defp reserve(ctx, chat_id, chat_type, kind, opts \\ []) do
+  defp reserve(ctx, chat_id, chat_type, kind, opts) do
     RateLimiter.reserve(chat_id, chat_type, kind, [server: ctx.server] ++ opts)
   end
 
-  defp wait!(ctx, chat_id, chat_type, kind \\ :message) do
-    {:ok, wait} = reserve(ctx, chat_id, chat_type, kind)
+  defp wait!(ctx, chat_id, chat_type, kind \\ :message, opts \\ []) do
+    {:ok, wait, _booking} = reserve(ctx, chat_id, chat_type, kind, opts)
     wait
+  end
+
+  # Reserves a message slot: returns its time and the booking.
+  defp book!(ctx, chat_id, chat_type, opts \\ []) do
+    {:ok, wait, booking} = reserve(ctx, chat_id, chat_type, :message, opts)
+    {now(ctx) + wait, booking}
   end
 
   defp advance(ctx, ms), do: :atomics.add(ctx.clock, 1, ms)
@@ -123,6 +129,63 @@ defmodule Angler.Telegram.RateLimiterTest do
     end
   end
 
+  describe "several messages at once (count)" do
+    test "go out together, and the chat's next message waits as if they were spaced",
+         ctx do
+      assert wait!(ctx, @private, "private", :message, count: 3) == 0
+      assert wait!(ctx, @private, "private") == 3 * 1_050
+
+      advance(ctx, 3 * 1_050)
+      assert wait!(ctx, @private, "private", :message, count: 10) == 1_050
+    end
+
+    test "count toward the group window", ctx do
+      assert wait!(ctx, @group, "supergroup", :message, count: 10) == 0
+      assert wait!(ctx, @group, "supergroup", :message, count: 10) == 10_500
+
+      # 20 messages in the minute: nothing more until the first ten leave it.
+      assert wait!(ctx, @group, "supergroup") == 60_000
+    end
+
+    test "fit a group window only when all of them fit", ctx do
+      for _ <- 1..15, do: advance(ctx, wait!(ctx, @group, "supergroup"))
+
+      # 15 sends at 0, 1050, ..., 14700: 5 more fit now, 6 have to wait until
+      # the first send leaves the window.
+      assert now(ctx) == 14_700
+
+      assert reserve(ctx, @group, "supergroup", :message, count: 6, max_wait: 1_050) ==
+               {:error, {:rate_limited, 60_000 - 14_700}}
+
+      assert wait!(ctx, @group, "supergroup", :message, count: 5) == 1_050
+    end
+
+    @tag limits: [global_limit: 5]
+    test "count toward the global limit", ctx do
+      assert wait!(ctx, 1, "private", :message, count: 3) == 0
+      assert wait!(ctx, 2, "private", :message, count: 3) == 1_000
+      assert wait!(ctx, 3, "private", :message, count: 2) == 0
+      assert wait!(ctx, 4, "private") == 1_000
+    end
+
+    @tag limits: [global_limit: 12]
+    test "are refused unless 1 <= count <= min(group_limit, global_limit)", ctx do
+      for {kind, count} <- [message: 0, message: -1, message: 13, message: 1.0, light: 2] do
+        assert reserve(ctx, @private, "private", kind, count: count) == {:error, :invalid_count}
+      end
+
+      # Nothing was booked, and the limiter keeps serving.
+      assert wait!(ctx, @private, "private", :message, count: 12) == 0
+      assert wait!(ctx, @other_private, "private", :light) == 1_000
+    end
+
+    @tag limits: [group_limit: 4]
+    test "never exceed the smaller group limit", ctx do
+      assert reserve(ctx, @group, "group", :message, count: 5) == {:error, :invalid_count}
+      assert wait!(ctx, @group, "group", :message, count: 4) == 0
+    end
+  end
+
   describe "window_slot/4" do
     test "returns the earliest time keeping every window within the limit" do
       assert RateLimiter.window_slot(0, [], 2, 1_000) == 0
@@ -150,6 +213,37 @@ defmodule Angler.Telegram.RateLimiterTest do
       end
     end
 
+    # n events at once fit where one event fits `limit - n + 1`, even though the
+    # earlier bookings (of mixed sizes) break that lower limit.
+    test "with limit - n + 1 finds the earliest slot for n events at once" do
+      book = fn times, at, n -> Enum.sort(times ++ List.duplicate(at, n)) end
+
+      for _ <- 1..1_000 do
+        limit = Enum.random(1..6)
+        window = Enum.random(1..15)
+
+        times =
+          Enum.reduce(1..Enum.random(0..10)//1, [], fn _, times ->
+            n = Enum.random(1..limit)
+
+            book.(
+              times,
+              RateLimiter.window_slot(Enum.random(0..40), times, limit - n + 1, window),
+              n
+            )
+          end)
+
+        assert valid?(times, limit, window)
+
+        n = Enum.random(1..limit)
+        t = Enum.random(0..40)
+        slot = RateLimiter.window_slot(t, times, limit - n + 1, window)
+
+        assert valid?(book.(times, slot, n), limit, window)
+        assert Enum.find(t..slot, &valid?(book.(times, &1, n), limit, window)) == slot
+      end
+    end
+
     defp valid?(sorted, limit, window) do
       sorted
       |> Enum.chunk_every(limit + 1, 1, :discard)
@@ -171,6 +265,77 @@ defmodule Angler.Telegram.RateLimiterTest do
 
       assert wait!(ctx, @private, "private") == 2_000
       assert wait!(ctx, @group, "group", :light) == 2_000
+    end
+
+    test "gives back the booking of the send that got the 429", ctx do
+      assert {0, album} = book!(ctx, @group, "supergroup", count: 10)
+
+      # Telegram posted none of the ten: they leave the windows, and the chat's
+      # next message no longer waits for them.
+      advance(ctx, 100)
+      RateLimiter.backoff(@group, 1, server: ctx.server, release: album)
+
+      assert %{global: [], chats: %{@group => %{last: nil, times: []}}} =
+               :sys.get_state(ctx.pid)
+
+      # The retry books them again, without phantom bookings: ten more fit in the
+      # minute, the next message waits for the retried ten to leave it.
+      advance(ctx, 1_250)
+      assert wait!(ctx, @group, "supergroup", :message, count: 10) == 0
+      assert wait!(ctx, @group, "supergroup", :message, count: 10) == 10_500
+      assert wait!(ctx, @group, "supergroup") == 60_000
+    end
+
+    test "keeps the bookings of other callers waiting for their slot", ctx do
+      # An album sent at 0, and another one waiting for its slot at 10500.
+      assert {0, _sent} = book!(ctx, @group, "supergroup", count: 10)
+      assert {10_500, _waiting} = book!(ctx, @group, "supergroup", count: 10)
+
+      # Another send to the group got a 429 at 2000. The backoff is over before
+      # 10500: the waiting album goes out at its slot, it doesn't reserve again.
+      advance(ctx, 2_000)
+      RateLimiter.backoff(@group, 3, server: ctx.server)
+
+      # 20 messages in the minute: the next ten wait for the first ten to leave it.
+      advance(ctx, 9_000)
+      assert wait!(ctx, @group, "supergroup", :message, count: 10) == 60_000 - 11_000
+    end
+
+    test "keeps the chat interval between the sends that follow", ctx do
+      # A video sent at 0; a follow-up text and a failure reply wait for their slots.
+      assert {0, video} = book!(ctx, @private, "private")
+      assert {1_050, follow_up} = book!(ctx, @private, "private")
+      assert {2_100, _reply} = book!(ctx, @private, "private")
+
+      # The video got a 429 (1 s) at 500.
+      advance(ctx, 500)
+      RateLimiter.backoff(@private, 1, server: ctx.server, release: video)
+
+      # The follow-up wakes up during the backoff: it gives its slot back and
+      # reserves another one (as acquire/4 does).
+      advance(ctx, 550)
+      {follow_up_at, _booking} = book!(ctx, @private, "private", release: follow_up)
+
+      # The video is sent again after the backoff.
+      advance(ctx, 700)
+      {video_at, _booking} = book!(ctx, @private, "private")
+
+      # The reply wakes up after the backoff and goes out at its slot, 2100.
+      sends = Enum.sort([follow_up_at, video_at, 2_100])
+      assert sends == [2_100, 3_150, 4_200]
+    end
+
+    test "gives back only the released booking of a chat", ctx do
+      assert {0, first} = book!(ctx, @group, "supergroup", count: 3)
+      assert {3_150, _second} = book!(ctx, @group, "supergroup", count: 2)
+      assert wait!(ctx, @other_private, "private") == 0
+
+      RateLimiter.backoff(@group, 0, server: ctx.server, release: first)
+
+      # The second booking and its spacing stay, other chats keep theirs.
+      assert %{global: [0, 3_150, 3_150], chats: chats} = :sys.get_state(ctx.pid)
+      assert %{last: 4_200, times: [3_150, 3_150]} = chats[@group]
+      assert %{last: 0} = chats[@other_private]
     end
 
     test "never shortens an earlier backoff", ctx do
@@ -198,6 +363,9 @@ defmodule Angler.Telegram.RateLimiterTest do
                server: ctx.server,
                max_wait: 500
              ) == {:error, {:rate_limited, 1_000}}
+
+      # The slot it didn't use was given back: only the first message is booked.
+      assert %{global: [0], chats: %{@private => %{last: 0}}} = :sys.get_state(ctx.pid)
     end
   end
 
@@ -208,7 +376,7 @@ defmodule Angler.Telegram.RateLimiterTest do
       assert reserve(ctx, @private, "private", :message, max_wait: 500) ==
                {:error, {:rate_limited, 1_050}}
 
-      assert reserve(ctx, @private, "private", :message, max_wait: 1_050) == {:ok, 1_050}
+      assert {:ok, 1_050, _booking} = reserve(ctx, @private, "private", :message, max_wait: 1_050)
     end
   end
 
@@ -231,9 +399,11 @@ defmodule Angler.Telegram.RateLimiterTest do
     )
 
     started = System.monotonic_time(:millisecond)
-    assert RateLimiter.acquire(@private, "private", :message, server: name) == :ok
-    assert RateLimiter.acquire(@private, "private", :message, server: name) == :ok
+    assert {:ok, first} = RateLimiter.acquire(@private, "private", :message, server: name)
+    assert {:ok, second} = RateLimiter.acquire(@private, "private", :message, server: name)
     assert System.monotonic_time(:millisecond) - started >= 50
+    assert %{chat_id: @private, kind: :message, count: 1} = second
+    assert second.at - first.at == 50
 
     assert {:error, {:rate_limited, wait}} =
              RateLimiter.acquire(@private, "private", :message, server: name, max_wait: 10)

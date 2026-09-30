@@ -62,23 +62,26 @@ defmodule Angler.Telegram.HTTP do
   slot of `kind` (`:message`, or `:light` for best-effort calls that are never
   retried), retrying 429 answers whose wait is short (see `Angler.Telegram`).
 
-  Options: `:chat_type` (for the rate limiter), `:max_wait` (ms, default a minute)
+  Options: `:chat_type` (for the rate limiter), `:max_wait` (ms, default a minute),
+  `:count` (how many messages the call posts, e.g. an album's items; default 1)
   and those of `post/3`.
   """
   @spec send_to_chat(String.t(), integer(), RateLimiter.kind(), keyword(), keyword()) ::
           Telegram.result()
   def send_to_chat(method, chat_id, kind, body, opts \\ []) do
     {chat_type, opts} = Keyword.pop(opts, :chat_type)
-    {max_wait, req_opts} = Keyword.pop(opts, :max_wait, @max_wait_ms)
+    {count, opts} = Keyword.pop(opts, :count, 1)
+    {max_wait, req_opts} = Keyword.pop(opts, :max_wait)
 
     call = %{
       method: method,
       chat_id: chat_id,
       chat_type: chat_type,
       kind: kind,
+      count: count,
       body: body,
       req_opts: req_opts,
-      max_wait: max_wait
+      max_wait: max_wait || @max_wait_ms
     }
 
     send_with_retries(call, 0)
@@ -98,7 +101,7 @@ defmodule Angler.Telegram.HTTP do
   ## Rate limited calls
 
   defp send_with_retries(call, retries) do
-    with :ok <- acquire(call),
+    with {:ok, booking} <- acquire(call),
          {:error, %Error{code: 429} = error} <- post(call.method, call.body, call.req_opts) do
       error = %Error{error | retry_after: error.retry_after || 1}
 
@@ -109,21 +112,38 @@ defmodule Angler.Telegram.HTTP do
           {:error, error}
 
         error.retry_after * 1_000 <= call.max_wait and retries < @max_rate_limit_retries ->
-          RateLimiter.backoff(call.chat_id, error.retry_after)
+          back_off(call, error, booking)
           Process.sleep(error.retry_after * 1_000 + @retry_margin_ms)
           send_with_retries(call, retries + 1)
 
         true ->
-          RateLimiter.backoff(call.chat_id, error.retry_after)
+          back_off(call, error, booking)
           {:error, error}
       end
     end
   end
 
+  # Telegram posted none of the booked messages: their slot is given back, the
+  # bookings of other sends to the chat stay.
+  defp back_off(call, error, booking),
+    do: RateLimiter.backoff(call.chat_id, error.retry_after, release: booking)
+
   defp acquire(call) do
-    case RateLimiter.acquire(call.chat_id, call.chat_type, call.kind, max_wait: call.max_wait) do
-      :ok ->
-        :ok
+    case RateLimiter.acquire(call.chat_id, call.chat_type, call.kind,
+           max_wait: call.max_wait,
+           count: call.count
+         ) do
+      {:ok, booking} ->
+        {:ok, booking}
+
+      {:error, :invalid_count} ->
+        {:error,
+         %Error{
+           method: call.method,
+           code: 400,
+           description:
+             "Bad Request: the local rate limiter can't book #{inspect(call.count)} messages at once"
+         }}
 
       {:error, {:rate_limited, wait_ms}} ->
         retry_after = div(wait_ms + 999, 1_000)

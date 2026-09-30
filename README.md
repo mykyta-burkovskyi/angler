@@ -1,11 +1,12 @@
 # Angler
 
-A self-hosted Telegram bot that turns video links into videos. Post a TikTok,
+A self-hosted Telegram bot that turns links into videos and photos. Post a TikTok,
 Instagram, YouTube, X, Reddit or similar link in a chat, and Angler replies to the
-message with the video itself: downloaded with [yt-dlp](https://github.com/yt-dlp/yt-dlp),
-shrunk with ffmpeg when needed so it fits Telegram's upload limit, and playable
-inline. A web dashboard shows every link as it moves through the pipeline and lets
-you tune storage and filtering.
+message with the media itself: the video, downloaded with
+[yt-dlp](https://github.com/yt-dlp/yt-dlp), shrunk with ffmpeg when needed so it
+fits Telegram's upload limit, and playable inline, or the photos and videos of an
+Instagram post as an album. A web dashboard shows every link as it moves through
+the pipeline and lets you tune storage and filtering.
 
 ## Features
 
@@ -24,17 +25,33 @@ you tune storage and filtering.
   order, each shown for 3–6 s and cycled for the length of the sound (up to
   90 s; a single photo stays up for the whole sound), on a canvas matching the
   photos' shape with a blurred fill. Posts without a sound become silent videos.
-- **Titles as captions.** Videos are posted with their title (the YouTube title,
-  the TikTok post text, ...) as a plain-text caption, trimmed to Telegram's
-  1024-character limit. Titles that are just the link or the video id are left
-  out. Can be turned off in the settings.
-- **Instant repeats.** A link that was already delivered is re-sent by Telegram
-  file id, with no second download.
+- **Instagram photos and carousels.** Photo posts and carousels (up to 20 photos
+  and videos) are sent as they are, in order: a single photo as a photo, anything
+  more as Telegram albums of up to 10 items (larger carousels arrive as several
+  albums), with the post text. Videos in a carousel are fitted to the upload
+  limit like any other video; photos Telegram doesn't accept (over 10 MB, or
+  extreme sizes) are left out. Reels still go through yt-dlp, with the post text
+  as their caption. Posts are read without logging in; [cookies](#cookies) are
+  only a fallback. Share links, `instagr.am` links and `?img_index=` links to
+  the same post work too.
+- **Post text as captions.** Media is posted with its title or post text (the
+  YouTube title, the TikTok or Instagram post text, ...) as a plain-text caption.
+  Text longer than Telegram's 1024-character caption limit follows as a separate
+  message replying to the media (up to 4096 characters) instead of being cut.
+  With the local Bot API server, whose long uploads may never be confirmed, the
+  media also gets the start of such a text as its caption: the full text follows
+  only once Telegram confirmed the upload.
+  Titles that are just the link or the video id are left out. Can be turned off
+  in the settings.
+- **Instant repeats.** A video link that was already delivered is re-sent by
+  Telegram file id, with no second download. Albums are downloaded again every
+  time.
 - **Respects rate limits.** Per-chat, per-group and global send limits and
   Telegram's `retry_after` are handled for you.
 - **Live dashboard.** Watch progress in real time; retry, cancel or delete
-  entries; preview kept videos; adjust storage and filtering without a restart.
-- **Storage under control.** Kept videos are evicted by age (retention) and by
+  entries; preview kept videos and albums; adjust storage and filtering without a
+  restart.
+- **Storage under control.** Kept media is evicted by age (retention) and by
   total size (storage cap).
 - **Up-to-date yt-dlp.** Optionally tracks yt-dlp's nightly or stable channel,
   because sites change often.
@@ -51,10 +68,10 @@ Telegram ── webhook (or polling) ──▶ Angler
                          Postgres "entries" table (the job queue)
                                       │
                                       ▼
-            Broadway pipeline ── yt-dlp download ─▶ ffprobe/ffmpeg: fit to size
+        Broadway pipeline ── download (yt-dlp, post photos) ─▶ ffprobe/ffmpeg: fit to size
                                       │
                                       ▼
-                         sendVideo (rate-limited) as a reply to the message
+          sendVideo / sendPhoto / sendMediaGroup (rate-limited) as a reply
                                       │
                                       ▼
                     LiveView dashboard: live status, progress, settings
@@ -247,7 +264,14 @@ whether the bot and webhook are working.
   whole file to Telegram and closes connections that stay idle for about 500 s, so
   an upload that takes longer than that (a very large file on a slow uplink) can't
   be confirmed. Angler then marks the entry *"Telegram did not confirm the upload
-  in time; the video may still appear in the chat"* instead of sending it again.
+  in time; it may still appear in the chat"* instead of sending it again.
+- **Albums:** up to 10 photos and videos per album message, each counted as one
+  message for the rate limits. Through the cloud Bot API one album may carry at
+  most 50 MB in total, so large carousels are split into more albums. Photos may
+  be at most 10 MB, with width + height up to 10,000 pixels and a ratio of at
+  most 20:1. When a later album of a carousel can't be sent, the entry fails as
+  sent in part (*"Only N of M items could be sent."*); what was delivered is never
+  sent again.
 - **Rate limits:** about 1 message per second per chat, 20 per minute per group
   and about 30 per second overall. Angler schedules sends within these limits and
   obeys Telegram's `retry_after` automatically, so a burst of links queues up
@@ -260,22 +284,22 @@ whether the bot and webhook are working.
 - **Entries** (`/`): every link with its status (queued, downloading, processing,
   uploading, done, failed, cancelled), live progress, chat, size and duration.
   Filter by status, search, and retry, cancel or delete entries. Each entry has a
-  detail page with the full error, media information and a video preview while the
-  file is kept.
+  detail page with the full error, media information and a preview while the files
+  are kept: the video, or an album's photos and videos with its post text.
 - **Settings** (`/settings`), applied immediately without a restart:
 
   | Setting | Default | |
   |---|---|---|
-  | Storage cap | 10,240 MB | Total size of kept videos; the oldest are deleted first |
-  | Retention | 7 days | How long delivered videos are kept; 0 deletes them right after sending |
+  | Storage cap | 10,240 MB | Total size of kept media; the oldest is deleted first |
+  | Retention | 7 days | How long delivered media is kept; 0 deletes it right after sending |
   | Max source size | 1024 MB | Larger downloads are refused |
   | Max duration | 30 min | Longer videos are refused before downloading |
   | Upload target | Bot API maximum | Size produced videos must fit (50 or 2000 MB) |
-  | Allowed hosts | TikTok, Instagram, YouTube, X, Reddit, … | Only links to these sites; empty allows any public site (private and LAN addresses stay blocked, see `ALLOW_PRIVATE_NETWORK_DOWNLOADS`) |
+  | Allowed hosts | TikTok, Instagram (and `instagr.am`), YouTube, X, Reddit, … | Only links to these sites; empty allows any public site (private and LAN addresses stay blocked, see `ALLOW_PRIVATE_NETWORK_DOWNLOADS`). `instagr.am` is only in the defaults of new installs: add it to an existing list for Instagram's short links |
   | Allowed chats | any | Only messages from these chat ids. **Fill this in** unless anyone may use your bot, see [Who can use the bot](#who-can-use-the-bot) |
   | Failure replies | private chats | Explain failures: never, in private chats, or everywhere |
   | Reactions | on | 👀 while working, 👎 on failure |
-  | Title captions | on | Post the video's title as its caption (plain text, trimmed to 1024 characters) |
+  | Post text as captions | on | Post the title or post text as the caption (plain text); text longer than 1024 characters follows as a separate message |
   | History | 90 days | Finished entries older than this are removed from the list; 0 keeps them forever |
 
   The page also shows the Telegram connection (bot, webhook status and last
@@ -311,11 +335,11 @@ are configured on the dashboard, not here.
 | `TELEGRAM_API_BASE_URL` | `https://api.telegram.org` | Bot API server, e.g. `http://telegram-bot-api:8081` |
 | `TELEGRAM_LOCAL_MODE` | `false` | The Bot API server runs with `--local` (2000 MB uploads by file path); needs `TELEGRAM_API_BASE_URL` set to that server |
 | `DOWNLOAD_CONCURRENCY` | `2` | Links downloaded and converted in parallel |
-| `UPLOAD_CONCURRENCY` | `2` | Videos uploaded in parallel |
+| `UPLOAD_CONCURRENCY` | `2` | Videos or albums uploaded in parallel |
 | `MAX_ATTEMPTS` | `3` | Attempts per link for temporary failures |
 | `PIPELINE_ENABLED` | `true` | `false` pauses processing (links are still queued) |
 | `YTDLP_UPDATE_CHANNEL` | *empty* (`.env.example`: `nightly`) | `nightly` or `stable`: keep a self-updating yt-dlp in `/data/bin`; empty uses the bundled one |
-| `YTDLP_COOKIES_FILE` | *empty* | Path of a Netscape `cookies.txt` inside the container, see [Cookies](#cookies) |
+| `YTDLP_COOKIES_FILE` | *empty* | Path of a Netscape `cookies.txt` inside the container, for yt-dlp and as a logged-in fallback for Instagram and TikTok posts, see [Cookies](#cookies) |
 | `ALLOWED_ORIGINS` | *empty* | Extra host names the dashboard may be opened from (comma separated). `localhost`, private IPs and LAN names (`nas`, `*.local`, `*.lan`, …) always work |
 | `ALLOW_PRIVATE_NETWORK_DOWNLOADS` | `false` | `true` lets links (and the redirects yt-dlp follows) reach this machine, your LAN and other private addresses, including the compose services. While it is `false`, yt-dlp goes through Angler's own egress guard, which connects directly and ignores `HTTPS_PROXY`/`HTTP_PROXY`/`ALL_PROXY`; if the server can only reach the internet through such a proxy, set this to `true` |
 | `POOL_SIZE` | `10` | Database connections |
@@ -361,9 +385,10 @@ pipeline gives running downloads, conversions and uploads 15 seconds to finish.
 Whatever is still running then is stopped and picked up again on the next
 start. An upload cut off this way may already have reached Telegram
 (most likely with long uploads through the local Bot API server), so that video
-can occasionally be posted twice. An upload that Telegram doesn't confirm while
-the app keeps running is not retried: the entry fails with *"Telegram did not
-confirm the upload in time; the video may still appear in the chat"*.
+can occasionally be posted twice. An album interrupted after part of it was
+delivered is not sent again: it fails as sent in part. An upload that Telegram
+doesn't confirm while the app keeps running is not retried: the entry fails with
+*"Telegram did not confirm the upload in time; it may still appear in the chat"*.
 
 Stopping takes at most about 15 s × (1 + `DOWNLOAD_CONCURRENCY` +
 `UPLOAD_CONCURRENCY`), 75 s with the defaults. `stop_grace_period` in
@@ -419,18 +444,40 @@ it with the current password.
 
 ### Cookies
 
-Some content needs a logged-in session: Instagram in particular (it
-rate-limits anonymous access quickly), plus private, age-restricted or
-members-only videos.
+Some content needs a logged-in session: private, age-restricted or members-only
+videos, and Instagram or TikTok posts hidden from logged-out visitors (Instagram
+also rate-limits anonymous access at times).
 
-Every download uses these cookies, whoever sent the link. **Fill in Allowed
-chats first** (see [Who can use the bot](#who-can-use-the-bot)); otherwise anyone
-who finds the bot can use your logged-in session.
+How Angler uses the cookies file:
 
-1. Export a **Netscape-format `cookies.txt`** from a browser where you are logged
-   in, e.g. with a "cookies.txt" browser extension or
+- **yt-dlp** gets a fresh copy for every run: every video download (including
+  Instagram reels) uses the cookies.
+- **Instagram posts** are read logged out first. Only when Instagram hides the
+  post from logged-out visitors, rate-limits them, or can't be read, Angler asks
+  yt-dlp (with the cookies) for the post instead. Without cookies, hidden posts
+  fail right away (*"This Instagram post is private, deleted or age-restricted"*)
+  and rate-limited ones are tried again later.
+- **TikTok posts** are looked up logged out first (to tell photo posts from
+  videos). When TikTok hides the post, or its page can't be read, the page is
+  loaded once more with the cookies. Short links are always resolved without them.
+- Angler never sends the cookies to the servers the photos and videos come from,
+  to short-link resolvers or to any redirect target. For its own requests it
+  skips lines it can't use (logged by line number, never their contents) and
+  ignores files over 1 MB.
+
+The risks:
+
+- Everything fetched with the cookies is fetched as your account, whoever sent
+  the link: private posts that account can see can be reposted by anyone in an
+  allowed chat. **Fill in Allowed chats first** (see
+  [Who can use the bot](#who-can-use-the-bot)); otherwise anyone who finds the bot
+  can use your logged-in session.
+- Automated access can get an account restricted or banned. **Use a throwaway
+  account**, never your personal one.
+
+1. Export a **Netscape-format `cookies.txt`** from a browser where that account is
+   logged in, e.g. with a "cookies.txt" browser extension or
    `yt-dlp --cookies-from-browser firefox --cookies cookies.txt` on your desktop.
-   Use a secondary account: automated access can get an account restricted.
 2. Put it next to `compose.yaml` and make it readable by the container user
    (uid 65534): `sudo chown 65534 cookies.txt && sudo chmod 600 cookies.txt`.
 3. Mount it read-only with a `compose.override.yaml` (merged automatically):
@@ -443,8 +490,9 @@ who finds the bot can use your logged-in session.
 4. Set `YTDLP_COOKIES_FILE=/config/cookies.txt` in `.env` and run
    `docker compose up -d`.
 
-Angler gives yt-dlp a fresh copy for every download, so the read-only mount is
-fine. Cookies expire. If a site starts failing with "login required" again,
+Angler reads the file every time it needs it and gives yt-dlp a fresh copy for
+every run, so the read-only mount is fine and a replaced file takes effect without
+a restart. Cookies expire. If a site starts failing with "login required" again,
 export them again.
 
 ### Backups
@@ -466,7 +514,7 @@ docker compose exec -T db psql -q -U angler -d angler < angler-2026-09-26.sql
 docker compose start app
 ```
 
-The `media` volume only holds recently delivered videos (subject to retention)
+The `media` volume only holds recently delivered media (subject to retention)
 and caches, so it doesn't need a backup.
 
 ### Data and volumes
@@ -474,7 +522,7 @@ and caches, so it doesn't need a backup.
 | Volume | Contents |
 |---|---|
 | `pgdata` | Postgres 18 (data in `/var/lib/postgresql/18/docker`) |
-| `media` | `/data/media/<entry id>/` videos and thumbnails, `/data/cache` (yt-dlp, deno), `/data/bin` (managed yt-dlp) |
+| `media` | `/data/media/<entry id>/` videos, album photos and thumbnails, `/data/cache` (yt-dlp, deno), `/data/bin` (managed yt-dlp) |
 | `telegram-bot-api-data` | Local Bot API server state (option C) |
 | `caddy_data`, `caddy_config` | Certificates and Caddy state (option A) |
 
@@ -500,7 +548,8 @@ the same `media` volume, read-only, at the same path.
   *Max duration* so such links fail fast.
 - **Instagram/TikTok/YouTube downloads suddenly fail.** Sites change often. Set
   `YTDLP_UPDATE_CHANNEL=nightly` (or rebuild the image), and add
-  [cookies](#cookies) for sites that require a login.
+  [cookies](#cookies) for sites that require a login. Instagram posts that Angler
+  can't read itself are handed to yt-dlp, so a current yt-dlp helps there too.
 - **The dashboard loads but stays disconnected.** The websocket origin was
   rejected: add the host name you use to `ALLOWED_ORIGINS` (or set it as
   `PUBLIC_URL`).
@@ -538,7 +587,7 @@ received.
 
 ```sh
 mix test                    # needs the Postgres above; ffmpeg-based tests run when ffmpeg/ffprobe are on PATH
-mix test --include network  # also tests that reach the internet (real yt-dlp downloads)
+mix test --include network  # also tests that reach the internet (real yt-dlp downloads, live Instagram posts)
 mix precommit               # compile with warnings as errors, format, test: run before committing
 ```
 

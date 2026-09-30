@@ -15,8 +15,8 @@ defmodule Angler.Pipeline.Producer do
 
   The poll also runs a safety net (at most every `:stale_check_interval`): entries
   in progress that showed no sign of life for `:stale_after` were lost by a crashed
-  worker and are queued again (or failed when they have no attempts left), see
-  `recover_stale/1`. Workers show they are alive with every change of the entry and
+  worker and are queued again (or failed when they have no attempts left, an album
+  of which a part was delivered as sent in part), see `recover_stale/1`. Workers show they are alive with every change of the entry and
   with heartbeats during long downloads and conversions (see
   `Angler.Pipeline.Job.throttled_progress/3`), so the cutoff only needs to exceed
   the longest step without progress reports, not a whole job.
@@ -32,7 +32,7 @@ defmodule Angler.Pipeline.Producer do
 
   alias Angler.{Entries, Repo, Settings, Storage}
   alias Angler.Entries.Entry
-  alias Angler.Pipeline.Feedback
+  alias Angler.Pipeline.{AlbumUpload, Feedback}
   alias Broadway.Message
 
   @default_poll_interval 5_000
@@ -102,14 +102,21 @@ defmodule Angler.Pipeline.Producer do
   end
 
   defp recover(entry) do
-    if entry.attempts < entry.max_attempts do
-      Entries.schedule_retry(entry, :internal, @lost_message, 0)
-      :requeued
-    else
-      entry = Entries.mark_failed(entry, :internal, @lost_message)
-      Feedback.failed(entry, :internal, Settings.get())
-      Storage.purge(entry)
-      :failed
+    cond do
+      entry.attempts < entry.max_attempts ->
+        Entries.schedule_retry(entry, :internal, @lost_message, 0)
+        :requeued
+
+      # Part of its album is in the chat: failed as sent in part, keeping its files.
+      AlbumUpload.partly_delivered?(entry) ->
+        AlbumUpload.finish_partial(entry, Settings.get(), :interrupted)
+        :failed
+
+      true ->
+        entry = Entries.mark_failed(entry, :internal, @lost_message)
+        Feedback.failed(entry, :internal, Settings.get())
+        Storage.purge(entry)
+        :failed
     end
   rescue
     # The entry left its claim since it was read (finished, retried or claimed

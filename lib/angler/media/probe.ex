@@ -121,9 +121,13 @@ defmodule Angler.Media.Probe do
     end
   end
 
-  # Warnings may precede the JSON document; it starts with a line holding "{".
-  defp decode(lines) do
-    json = lines |> Enum.drop_while(&(String.trim(&1) != "{")) |> Enum.join("\n")
+  @doc false
+  # Decodes ffprobe's JSON document from its output `lines`. Its messages (errors,
+  # warnings) share the output: before the document or, since ffprobe 9, after its
+  # opening "{" (see `json_line?/1`). Public for tests.
+  @spec decode([String.t()]) :: {:ok, map()} | {:error, Error.t()}
+  def decode(lines) do
+    json = lines |> Enum.filter(&json_line?/1) |> Enum.join("\n")
 
     case Jason.decode(json) do
       {:ok, %{} = decoded} ->
@@ -135,16 +139,34 @@ defmodule Angler.Media.Probe do
     end
   end
 
-  defp failure(status, lines) do
-    messages = Enum.take_while(lines, &(String.trim(&1) != "{"))
+  @doc false
+  # The error for ffprobe's exit `status` and output `lines`, from its messages
+  # (every line not part of its JSON document, see decode/1): kind `:unsupported`
+  # when they say the file is not media. Public for tests.
+  @spec failure(integer(), [String.t()]) :: Error.t()
+  def failure(status, lines) do
+    messages = Enum.reject(lines, &json_line?/1)
     output = Enum.join(messages, "\n")
 
-    if Enum.any?(messages, &String.contains?(&1, @invalid_input)) do
-      Error.new(:unsupported, "Not a playable media file", output)
-    else
-      Error.new(:internal, "ffprobe failed (exit #{status}): #{List.last(messages)}", output)
+    cond do
+      Enum.any?(messages, &String.contains?(&1, @invalid_input)) ->
+        Error.new(:unsupported, "Not a playable media file", output)
+
+      messages == [] ->
+        Error.new(:internal, "ffprobe failed (exit #{status})", output)
+
+      true ->
+        Error.new(:internal, "ffprobe failed (exit #{status}): #{List.last(messages)}", output)
     end
   end
+
+  # A line of ffprobe's JSON document: its outer braces on lines of their own,
+  # blank lines, and indented members ("key": value) and the braces and brackets
+  # of nested values. Messages start at the beginning of a line (e.g.
+  # "[mov,mp4,m4a,3gp,3g2,mj2 @ 0x...] moov atom not found" or
+  # "<path>: Invalid data found when processing input"), except ffmpeg's
+  # "    Last message repeated n times".
+  defp json_line?(line), do: line =~ ~r/^\s*$|^[{}]\s*$|^\s+["{}\[\]]/
 
   defp finish(%__MODULE__{} = probe, path) do
     size = probe.size || file_size(path)

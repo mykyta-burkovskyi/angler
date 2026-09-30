@@ -7,7 +7,7 @@ defmodule Angler.Pipeline.FailuresTest do
   import ExUnit.CaptureLog
 
   alias Angler.Entries
-  alias Angler.Entries.Entry
+  alias Angler.Entries.{Entry, MediaItem}
   alias Angler.Pipeline.{Failures, RetryPolicy}
   alias Broadway.Message
 
@@ -84,7 +84,7 @@ defmodule Angler.Pipeline.FailuresTest do
                    @timeout
 
     assert_receive {:bot_api, "sendMessage",
-                    %{"text" => "This video is private, removed or unavailable."}},
+                    %{"text" => "This post is private, removed or unavailable."}},
                    @timeout
   end
 
@@ -97,6 +97,67 @@ defmodule Angler.Pipeline.FailuresTest do
 
     assert %Entry{status: :failed, error_kind: :telegram} = Entries.get(entry.id)
     assert_receive {:bot_api, "setMessageReaction", _params}, @timeout
+  end
+
+  test "fails an album of which a part was delivered instead of retrying it" do
+    entry = claimed_entry("private")
+
+    items = [
+      MediaItem.new(%{type: :photo, path: "album/01/photo.jpg", file_id: "AgAC1"}),
+      MediaItem.new(%{type: :photo, path: "album/02/photo.jpg"})
+    ]
+
+    entry = Entries.update!(entry, %{media_kind: :album, media_items: items})
+    data = %{entry: entry, album: [], output: nil, settings: nil}
+    crashed = %{message(data) | status: {:error, %RuntimeError{message: "boom"}, []}}
+
+    Failures.handle(crashed, %{retry_base_delay: 10})
+
+    # Sending it again would post the first photo twice.
+    assert %Entry{status: :failed, error_kind: :telegram, error: error} = Entries.get(entry.id)
+    assert error == "Only 1 of 2 items were sent: ** (RuntimeError) boom"
+
+    assert_receive {:bot_api, "sendMessage", %{"text" => "Only 1 of 2 items could be sent."}},
+                   @timeout
+
+    assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👎"}]}},
+                   @timeout
+  end
+
+  test "retries an album sent again from the dashboard that failed before its first attempt" do
+    items = [
+      MediaItem.new(%{type: :photo, path: "album/01/photo.jpg", file_id: "AgAC1"}),
+      MediaItem.new(%{type: :video, path: "album/02/video.mp4", file_id: "BAAC2"})
+    ]
+
+    delivered =
+      Entries.mark_done(claimed_entry("private"), %{media_kind: :album, media_items: items})
+
+    {:ok, _requeued} = Entries.retry(delivered)
+    [claimed] = Entries.claim(1)
+
+    # E.g. the database could not be reached before the job cleared the old items.
+    crashed = %{
+      message(claimed)
+      | status: {:error, %DBConnection.ConnectionError{message: "connection lost"}, []}
+    }
+
+    Failures.handle(crashed, %{retry_base_delay: 10})
+
+    # Nothing of this claim cycle is in the chat: retried like any crash.
+    assert %Entry{status: :queued, error_kind: :internal} = Entries.get(claimed.id)
+    refute_receive {:bot_api, "sendMessage", _params}, 200
+  end
+
+  test "retries an album of which nothing was delivered" do
+    entry = claimed_entry("private")
+    items = [MediaItem.new(%{type: :photo, path: "album/01/photo.jpg"})]
+    entry = Entries.update!(entry, %{media_kind: :album, media_items: items})
+    data = %{entry: entry, album: [], output: nil, settings: nil}
+
+    Failures.handle(Message.failed(message(data), {:transient, "Bad Gateway"}), %{})
+
+    assert %Entry{status: :queued, error: "Bad Gateway"} = Entries.get(entry.id)
   end
 
   test "classifies crashes as internal errors" do

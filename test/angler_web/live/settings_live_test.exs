@@ -118,7 +118,8 @@ defmodule AnglerWeb.SettingsLiveTest do
       assert has_element?(view, "#setting_failure_replies option[selected][value=private]")
       assert has_element?(view, "#setting_reactions_enabled[checked]")
       assert has_element?(view, "#setting_title_captions[checked]")
-      assert has_element?(view, "#settings-form", "Post titles as captions")
+      assert has_element?(view, "#settings-form", "Post text as captions")
+      assert has_element?(view, "#settings-form", "follows as a separate message")
       assert has_element?(view, "#form-status", "All changes saved")
       refute has_element?(view, "#discard-changes")
     end

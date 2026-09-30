@@ -16,6 +16,7 @@ defmodule AnglerWeb.EntryLive.OverviewComponents do
   attr :entry, Entry, required: true
   attr :video_url, :string, default: nil
   attr :thumbnail_url, :string, default: nil
+  attr :album, :list, default: [], doc: "the album's items (see `EntryLive.PreviewComponents`)"
 
   def entry_header(assigns) do
     ~H"""
@@ -41,10 +42,19 @@ defmodule AnglerWeb.EntryLive.OverviewComponents do
             >
               Slideshow
             </span>
+            <span
+              :if={album_kind(@entry)}
+              id="entry-album-badge"
+              class="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand"
+            >
+              {String.capitalize(album_kind(@entry))}
+            </span>
           </div>
+          <%!-- Post texts can be long: the preview shows an album's in full. --%>
           <h1
             id="entry-title"
-            class="mt-2 text-xl font-semibold tracking-tight break-words text-ink sm:text-2xl"
+            title={entry_title(@entry)}
+            class="mt-2 line-clamp-3 text-xl font-semibold tracking-tight break-words text-ink sm:text-2xl"
           >
             {entry_title(@entry)}
           </h1>
@@ -61,14 +71,16 @@ defmodule AnglerWeb.EntryLive.OverviewComponents do
         </div>
       </div>
 
-      <.entry_actions entry={@entry} video_url={@video_url} thumbnail_url={@thumbnail_url} />
+      <.entry_actions
+        entry={@entry}
+        files?={files?(@entry, [@video_url, @thumbnail_url | Enum.map(@album, & &1.url)])}
+      />
     </div>
     """
   end
 
   attr :entry, Entry, required: true
-  attr :video_url, :string, default: nil
-  attr :thumbnail_url, :string, default: nil
+  attr :files?, :boolean, required: true
 
   defp entry_actions(assigns) do
     ~H"""
@@ -77,7 +89,7 @@ defmodule AnglerWeb.EntryLive.OverviewComponents do
         :if={Entry.retryable?(@entry)}
         id="retry-entry"
         phx-click="retry"
-        data-confirm={@entry.status == :done && "Download and send this video to the chat again?"}
+        data-confirm={retry_confirm(@entry)}
       >
         <.icon name="hero-arrow-path" class="size-4" />
         {if @entry.status == :done, do: "Send again", else: "Retry"}
@@ -86,10 +98,10 @@ defmodule AnglerWeb.EntryLive.OverviewComponents do
         <.icon name="hero-no-symbol" class="size-4" /> Cancel
       </.button>
       <.button
-        :if={files?(@entry, @video_url, @thumbnail_url) and Entry.terminal?(@entry)}
+        :if={@files? and Entry.terminal?(@entry)}
         id="purge-entry"
         phx-click="purge"
-        data-confirm="Delete the stored video and thumbnail? The entry itself stays."
+        data-confirm="Delete the stored files? The entry itself stays."
       >
         <.icon name="hero-archive-box-x-mark" class="size-4" /> Delete files
       </.button>
@@ -106,8 +118,7 @@ defmodule AnglerWeb.EntryLive.OverviewComponents do
     """
   end
 
-  defp files?(entry, video_url, thumbnail_url),
-    do: entry.stored_bytes > 0 or video_url != nil or thumbnail_url != nil
+  defp files?(entry, urls), do: entry.stored_bytes > 0 or Enum.any?(urls)
 
   @doc """
   Renders where the entry stands: the full error of a failed entry, a notice for a

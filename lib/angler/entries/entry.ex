@@ -1,7 +1,8 @@
 defmodule Angler.Entries.Entry do
   @moduledoc """
   A single link found in a Telegram message, and everything that happened while
-  turning it into a video reply.
+  turning it into a reply with its video, or its photos and videos (an album, see
+  `Angler.Entries.MediaItem`).
 
   The table doubles as the durable job queue consumed by `Angler.Pipeline`.
 
@@ -15,6 +16,8 @@ defmodule Angler.Entries.Entry do
   `failed` and `cancelled` entries can be re-queued from the dashboard.
   """
   use Ecto.Schema
+
+  alias Angler.Entries.MediaItem
 
   @statuses [:queued, :downloading, :processing, :uploading, :done, :failed, :cancelled]
   @active_statuses [:downloading, :processing, :uploading]
@@ -74,8 +77,11 @@ defmodule Angler.Entries.Entry do
     field :source_bytes, :integer
     field :output_bytes, :integer
     field :transcoded, :boolean, default: false
-    # :slideshow for TikTok photo posts assembled into a video (Angler.Media.Slideshow)
-    field :media_kind, Ecto.Enum, values: [:video, :slideshow]
+    # :slideshow for TikTok photo posts assembled into a video (Angler.Media.Slideshow),
+    # :album for posts sent as their photos and videos (media_items)
+    field :media_kind, Ecto.Enum, values: [:video, :slideshow, :album]
+    # An album's items in display order, see Angler.Entries.MediaItem; [] otherwise
+    embeds_many :media_items, MediaItem, on_replace: :delete
 
     field :storage_path, :string
     field :stored_bytes, :integer, default: 0
