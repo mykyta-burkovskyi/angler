@@ -1,0 +1,22 @@
+test/angler/media/slideshow/plan_test.exs
+  s_3b758e5207561d::t_4d0e2af0da7c43 168-185
+  s_3b758e5207561d::t_94fa62dde86eee 135-167,197-198
+lib/angler/media/slideshow/plan.ex
+  s_3b758e5207561d::t_4d0e2af0da7c43 26-28,43-44,170,174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "91140ac75e0ce29ade9d76608da9b858364b784d",
+  "prompts": {},
+  "sessions": {
+    "s_3b758e5207561d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f1149476-463f-4664-88de-0aba2fdb8792",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Mykyta Burkovskyi <burkovskyi.work@gmail.com>"
+    }
+  }
+}
