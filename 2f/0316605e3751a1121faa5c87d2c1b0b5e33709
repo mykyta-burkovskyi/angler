@@ -1,0 +1,24 @@
+mix.lock
+  s_b512175fd16850::t_105340b86c05f8 20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2f0316605e3751a1121faa5c87d2c1b0b5e33709",
+  "prompts": {},
+  "humans": {
+    "h_cd013b08c0e792": {
+      "author": "Mykyta Burkovskyi <burkovskyi.work@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_b512175fd16850": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9d023d36-ee1d-484f-b6c4-d1d97e3a43ea",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Mykyta Burkovskyi <burkovskyi.work@gmail.com>"
+    }
+  }
+}
