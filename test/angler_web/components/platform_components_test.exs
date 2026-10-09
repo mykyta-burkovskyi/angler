@@ -17,6 +17,11 @@ defmodule AnglerWeb.PlatformComponentsTest do
     assert platform_name("example.com") == nil
   end
 
+  test "TikTok's share domain is TikTok too" do
+    assert platform_name("www.tt.site") == "TikTok"
+    assert platform_name("tt.site") == "TikTok"
+  end
+
   test "Instagram's short domain is Instagram too" do
     assert platform_name("instagr.am") == "Instagram"
     assert platform_name("www.instagr.am") == "Instagram"

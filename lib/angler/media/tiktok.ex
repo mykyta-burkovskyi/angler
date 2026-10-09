@@ -7,7 +7,8 @@ defmodule Angler.Media.TikTok do
   `resolve/1`:
 
     1. recognizes the post id, following short links (`vm.`/`vt.tiktok.com/<code>`,
-       `tiktok.com/t/<code>`) with one request that reads the redirect location
+       `tiktok.com/t/<code>`, `www.tt.site/t/<code>`) with one request that reads the
+       redirect location
     2. loads `https://www.tiktok.com/@/video/<id>` and reads the post from the page
        (`Angler.Media.TikTok.Page`, which also solves TikTok's proof-of-work page,
        and loads it once more with the cookies file when TikTok hides the post

@@ -30,6 +30,11 @@ defmodule Angler.Media.TikTokTest do
           {"https://www.tiktok.com/t/ZTR45GpSF/",
            {:short, "https://www.tiktok.com/t/ZTR45GpSF/"}},
           {"https://tiktok.com/t/ZTR45GpSF", {:short, "https://tiktok.com/t/ZTR45GpSF"}},
+          {"https://www.tt.site/t/ZSbn1M6Yo/", {:short, "https://www.tt.site/t/ZSbn1M6Yo/"}},
+          {"https://tt.site/t/ZSbn1M6Yo", {:short, "https://www.tt.site/t/ZSbn1M6Yo"}},
+          {"https://www.tt.site/@doombreaker03/video/7694316974494534930",
+           {:post, "7694316974494534930", :video}},
+          {"https://www.tt.site/ZSbn1M6Yo/", :not_tiktok},
           {"https://www.tiktok.com/@hullcity", :not_tiktok},
           {"https://www.tiktok.com/music/original-sound-7547211051650157329", :not_tiktok},
           {"https://www.tiktok.com/", :not_tiktok},
@@ -170,6 +175,27 @@ defmodule Angler.Media.TikTokTest do
 
       assert TikTok.resolve("https://www.tiktok.com/t/ZTvideo/") ==
                {:ok, :video, "https://www.tiktok.com/@/video/7449708266168274208"}
+    end
+
+    test "follows TikTok's tt.site short links" do
+      stub_tiktok(fn conn ->
+        case conn.host <> conn.request_path do
+          "www.tt.site/t/ZSbn1M6Yo/" ->
+            redirect(
+              conn,
+              "https://www.tiktok.com/@doombreaker03/video/7694316974494534930?_r=1&_t=x",
+              301
+            )
+
+          "www.tiktok.com/@/video/7694316974494534930" ->
+            Req.Test.html(conn, page(detail(video_item("7694316974494534930"))))
+        end
+      end)
+
+      assert TikTok.route("https://www.tt.site/t/ZSbn1M6Yo/") ==
+               {:ytdlp, "https://www.tiktok.com/@/video/7694316974494534930"}
+
+      assert_received {:tiktok_request, "GET", "www.tt.site/t/ZSbn1M6Yo/", _conn}
     end
 
     test "reports expired short links" do

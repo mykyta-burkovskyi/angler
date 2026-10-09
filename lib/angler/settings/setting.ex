@@ -12,9 +12,9 @@ defmodule Angler.Settings.Setting do
   @max_chat_id Bitwise.bsl(1, 52)
 
   @default_hosts ~w(
-    tiktok.com instagram.com instagr.am youtube.com youtu.be x.com twitter.com reddit.com
-    redd.it facebook.com fb.watch vimeo.com twitch.tv threads.net threads.com bsky.app
-    pinterest.com pin.it streamable.com dailymotion.com snapchat.com
+    tiktok.com tt.site instagram.com instagr.am youtube.com youtu.be x.com twitter.com
+    reddit.com redd.it facebook.com fb.watch vimeo.com twitch.tv threads.net threads.com
+    bsky.app pinterest.com pin.it streamable.com dailymotion.com snapchat.com
   )
 
   @type t :: %__MODULE__{}

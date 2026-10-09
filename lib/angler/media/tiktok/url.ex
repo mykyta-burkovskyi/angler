@@ -3,16 +3,18 @@ defmodule Angler.Media.TikTok.Url do
   Recognizes TikTok post links without network access (pure).
 
     * posts: `(www.|m.)tiktok.com/@user/video/<id>` and `/@user/photo/<id>` (the user
-      name may be empty), `tiktokv.com/share/video/<id>`, `tiktok.com/embed(/v2)/<id>`
+      name may be empty; `www.tt.site`, TikTok's share domain, serves the same paths),
+      `tiktokv.com/share/video/<id>`, `tiktok.com/embed(/v2)/<id>`
     * short links, which only a request resolves: `vm.tiktok.com/<code>`,
-      `vt.tiktok.com/<code>` and `(www.)tiktok.com/t/<code>`
+      `vt.tiktok.com/<code>`, `(www.)tiktok.com/t/<code>` and `www.tt.site/t/<code>`
 
   Anything else (other sites, profiles, music and live pages) is `:not_tiktok`.
   """
 
-  @post_hosts ~w(tiktok.com www.tiktok.com m.tiktok.com tiktokv.com www.tiktokv.com m.tiktokv.com)
+  @post_hosts ~w(tiktok.com www.tiktok.com m.tiktok.com tiktokv.com www.tiktokv.com m.tiktokv.com
+                 tt.site www.tt.site)
   @short_hosts ~w(vm.tiktok.com vt.tiktok.com)
-  @web_hosts ~w(tiktok.com www.tiktok.com m.tiktok.com)
+  @web_hosts ~w(tiktok.com www.tiktok.com m.tiktok.com tt.site www.tt.site)
 
   @type parsed :: {:post, String.t(), :video | :photo} | {:short, String.t()} | :not_tiktok
 
@@ -48,7 +50,7 @@ defmodule Angler.Media.TikTok.Url do
         {:post, List.last(match), :video}
 
       host in @web_hosts and path =~ ~r{\A/t/\w+/?\z} ->
-        {:short, "https://" <> host <> path}
+        {:short, "https://" <> web_host(host) <> path}
 
       true ->
         :not_tiktok
@@ -56,6 +58,10 @@ defmodule Angler.Media.TikTok.Url do
   end
 
   defp classify(_host, _path), do: :not_tiktok
+
+  # Only www.tt.site has an address.
+  defp web_host("tt.site"), do: "www.tt.site"
+  defp web_host(host), do: host
 
   @doc """
   The page of a post, and the URL yt-dlp gets for a TikTok video:

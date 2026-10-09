@@ -300,7 +300,7 @@ whether the bot and webhook are working.
   | Max source size | 1024 MB | Larger downloads are refused |
   | Max duration | 30 min | Longer videos are refused before downloading |
   | Upload target | Bot API maximum | Size produced videos must fit (50 or 2000 MB) |
-  | Allowed hosts | TikTok, Instagram (and `instagr.am`), YouTube, X, Reddit, … | Only links to these sites; empty allows any public site (private and LAN addresses stay blocked, see `ALLOW_PRIVATE_NETWORK_DOWNLOADS`). `instagr.am` is only in the defaults of new installs: add it to an existing list for Instagram's short links |
+  | Allowed hosts | TikTok (and `tt.site`), Instagram (and `instagr.am`), YouTube, X, Reddit, … | Only links to these sites; empty allows any public site (private and LAN addresses stay blocked, see `ALLOW_PRIVATE_NETWORK_DOWNLOADS`). `instagr.am` and `tt.site` are only in the defaults of new installs: add them to an existing list for Instagram's short links and TikTok's `www.tt.site` share links |
   | Allowed chats | any | Only messages from these chat ids. **Fill this in** unless anyone may use your bot, see [Who can use the bot](#who-can-use-the-bot) |
   | Failure replies | private chats | Explain failures: never, in private chats, or everywhere |
   | Reactions | on | 👀 while working, 👎 on failure |

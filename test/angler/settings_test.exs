@@ -29,6 +29,14 @@ defmodule Angler.SettingsTest do
       end
     end
 
+    test "allows TikTok's share host out of the box" do
+      setting = Settings.get()
+
+      for url <- ["https://www.tt.site/t/ZSbn1M6Yo/", "https://vt.tiktok.com/ZSbqYsQFY"] do
+        assert Settings.host_allowed?(setting, Angler.Links.host(url))
+      end
+    end
+
     test "keeps the entry history for 90 days by default, and forever with 0" do
       assert Settings.get().history_days == 90
       assert {:ok, %Setting{history_days: 0}} = Settings.update(%{"history_days" => "0"})

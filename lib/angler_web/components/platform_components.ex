@@ -11,7 +11,7 @@ defmodule AnglerWeb.PlatformComponents do
 
   # {domains, name, monogram, tile classes}
   @platforms [
-    {~w(tiktok.com), "TikTok", "TT", "bg-zinc-900 text-white dark:bg-zinc-700"},
+    {~w(tiktok.com tt.site), "TikTok", "TT", "bg-zinc-900 text-white dark:bg-zinc-700"},
     {~w(instagram.com instagr.am), "Instagram", "IG",
      "bg-linear-to-br from-amber-400 via-pink-500 to-purple-600 text-white"},
     {~w(youtube.com youtu.be), "YouTube", "YT", "bg-red-600 text-white"},
