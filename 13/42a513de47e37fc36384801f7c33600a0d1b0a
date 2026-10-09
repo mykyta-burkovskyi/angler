@@ -1,0 +1,35 @@
+lib/angler/media/tiktok.ex
+  s_6a7e481f1ca75b::t_5695ba483176e5 10-11
+lib/angler_web/components/platform_components.ex
+  s_6a7e481f1ca75b::t_5695ba483176e5 14
+README.md
+  s_6a7e481f1ca75b::t_d1ada722d658f0 303
+test/angler/media/tiktok_test.exs
+  s_6a7e481f1ca75b::t_45b313e635130d 33-37,180-198
+  s_6a7e481f1ca75b::t_79d947e7841c09 199-200
+test/angler/settings_test.exs
+  s_6a7e481f1ca75b::t_45b313e635130d 32-39
+lib/angler/settings/setting.ex
+  s_6a7e481f1ca75b::t_5695ba483176e5 15-17
+lib/angler/media/tiktok/url.ex
+  s_6a7e481f1ca75b::t_5695ba483176e5 6-7,9,14-15,17,53,62-64
+  s_6a7e481f1ca75b::t_eb1648aec1694e 65
+test/angler_web/components/platform_components_test.exs
+  s_6a7e481f1ca75b::t_45b313e635130d 20-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1342a513de47e37fc36384801f7c33600a0d1b0a",
+  "prompts": {},
+  "sessions": {
+    "s_6a7e481f1ca75b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "660f4cce-8c36-459f-a95c-9d24a2ed92da",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Mykyta Burkovskyi <burkovskyi.work@gmail.com>"
+    }
+  }
+}
