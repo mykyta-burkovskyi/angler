@@ -276,7 +276,7 @@ defmodule Angler.Pipeline.AlbumTest do
                       %{"chat_id" => ^chat_id, "text" => "Only 1 of 2 items could be sent."}},
                      @timeout
 
-      assert_reactions(chat_id, ["👎"])
+      assert_reactions(chat_id, ["🤷"])
     end
 
     test "on its last attempt too" do
@@ -294,7 +294,7 @@ defmodule Angler.Pipeline.AlbumTest do
         "Only 1 of 2 items were sent: the upload was interrupted"
       )
 
-      assert_reactions(chat_id, ["👎"])
+      assert_reactions(chat_id, ["🤷"])
     end
 
     test "with a local Bot API server, which may still post the rest" do

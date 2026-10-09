@@ -45,7 +45,7 @@ defmodule Angler.Settings.Setting do
     field :allowed_chat_ids, {:array, :integer}, default: []
     # Where the bot replies with an error message when a link fails.
     field :failure_replies, Ecto.Enum, values: @failure_replies, default: :private
-    # React to messages (👀 while working, 👎 on failure) where reactions are allowed.
+    # React to messages (👀 while working, 🤷 on failure) where reactions are allowed.
     field :reactions_enabled, :boolean, default: true
     # Post the title or post text as the caption (plain text); text too long for a
     # caption follows as a message of its own (see Angler.Pipeline.Caption.split/3).

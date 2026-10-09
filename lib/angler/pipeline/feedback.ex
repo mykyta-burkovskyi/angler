@@ -2,7 +2,7 @@ defmodule Angler.Pipeline.Feedback do
   @moduledoc """
   Best-effort feedback in the chat while an entry is processed: a 👀 reaction on
   the original message while working (set once when it can be sent right away,
-  it stays while the entry is retried), cleared on success, 👎 and (depending on
+  it stays while the entry is retried), cleared on success, 🤷 and (depending on
   `failure_replies`) a short reply on failure or when only part of an album could
   be sent, and an "uploading video" (or photo) chat action before an upload.
   Also sends the post text that is too long for a caption as a message of its own
@@ -21,7 +21,7 @@ defmodule Angler.Pipeline.Feedback do
   alias Angler.Telegram
 
   @working "👀"
-  @failed "👎"
+  @failed "🤷"
   # The follow-up text may wait behind the album it follows (one rate limiter
   # slot per item, and in groups 20 messages a minute).
   @follow_up_max_wait 120_000
@@ -30,7 +30,7 @@ defmodule Angler.Pipeline.Feedback do
   Reacts 👀 to the original message when reactions are enabled, but only when the
   reaction can be sent right away: one held back by the rate limiter (e.g. while
   the chat is backed off after a 429) could arrive together with, and after, the
-  clear or 👎 of an entry that finished meanwhile, and stay on the message.
+  clear or 🤷 of an entry that finished meanwhile, and stay on the message.
   """
   @spec started(Entry.t(), Setting.t()) :: :ok
   def started(%Entry{} = entry, %Setting{reactions_enabled: true}),
@@ -47,7 +47,7 @@ defmodule Angler.Pipeline.Feedback do
 
   @doc """
   For an upload Telegram never confirmed (the video may still appear): clears the
-  bot's reaction like `succeeded/2`, without the 👎 and reply of `failed/3`.
+  bot's reaction like `succeeded/2`, without the 🤷 and reply of `failed/3`.
   """
   @spec unconfirmed(Entry.t(), Setting.t()) :: :ok
   def unconfirmed(%Entry{} = entry, %Setting{} = settings), do: succeeded(entry, settings)
@@ -74,7 +74,7 @@ defmodule Angler.Pipeline.Feedback do
   end
 
   @doc """
-  Reacts 👎 when reactions are enabled, and replies with `failure_text/2` when
+  Reacts 🤷 when reactions are enabled, and replies with `failure_text/2` when
   `failure_replies` is `:all`, or `:private` and the entry comes from a private chat.
   """
   @spec failed(Entry.t(), Entry.error_kind(), Setting.t()) :: :ok

@@ -98,7 +98,7 @@ defmodule Angler.Pipeline.MediaKindTest do
 
     # Feedback runs in tasks: wait for them, so none outlives the stubs. The 👀
     # reaction is set once and stays while the entry is retried.
-    for emoji <- ["👀", "👎"] do
+    for emoji <- ["👀", "🤷"] do
       assert_receive {:bot_api, "setMessageReaction",
                       %{"chat_id" => ^chat_id, "reaction" => [%{"emoji" => ^emoji}]}},
                      @timeout

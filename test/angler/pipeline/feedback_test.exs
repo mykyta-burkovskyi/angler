@@ -35,7 +35,7 @@ defmodule Angler.Pipeline.FeedbackTest do
     assert message_id == entry.message_id
   end
 
-  test "started/2 drops the 👀 while the chat is held back, so it can't land after the 👎",
+  test "started/2 drops the 👀 while the chat is held back, so it can't land after the 🤷",
        %{entry: entry, settings: settings} do
     # E.g. after a 429 on a video sent to the chat.
     RateLimiter.backoff(entry.chat_id, 1)
@@ -45,7 +45,7 @@ defmodule Angler.Pipeline.FeedbackTest do
     # The entry fails quickly, while the chat is still held back.
     assert Feedback.failed(entry, :unsupported, settings) == :ok
 
-    assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👎"}]}},
+    assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "🤷"}]}},
                    @timeout
 
     refute_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👀"}]}}, 500
@@ -70,7 +70,7 @@ defmodule Angler.Pipeline.FeedbackTest do
     end
   end
 
-  test "partial/4 reacts 👎 and replies how much of an album was sent",
+  test "partial/4 reacts 🤷 and replies how much of an album was sent",
        %{entry: entry, settings: settings} do
     assert Feedback.partial(entry, 10, 14, %{settings | failure_replies: :all}) == :ok
 
@@ -78,7 +78,7 @@ defmodule Angler.Pipeline.FeedbackTest do
     assert params["text"] == "Only 10 of 14 items could be sent."
     assert params["reply_parameters"]["message_id"] == entry.message_id
 
-    assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👎"}]}},
+    assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "🤷"}]}},
                    @timeout
   end
 

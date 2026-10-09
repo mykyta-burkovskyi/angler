@@ -85,7 +85,7 @@ Telegram ── webhook (or polling) ──▶ Angler
 The pipeline runs `DOWNLOAD_CONCURRENCY` downloads/encodes and
 `UPLOAD_CONCURRENCY` uploads at a time. Every state change is written to Postgres
 and broadcast to the dashboard. While a link is processed, the bot reacts with 👀,
-then clears the reaction on success or reacts with 👎 on failure (if reactions
+then clears the reaction on success or reacts with 🤷 on failure (if reactions
 are enabled and allowed in the chat).
 
 ## Quick start
@@ -303,7 +303,7 @@ whether the bot and webhook are working.
   | Allowed hosts | TikTok (and `tt.site`), Instagram (and `instagr.am`), YouTube, X, Reddit, … | Only links to these sites; empty allows any public site (private and LAN addresses stay blocked, see `ALLOW_PRIVATE_NETWORK_DOWNLOADS`). `instagr.am` and `tt.site` are only in the defaults of new installs: add them to an existing list for Instagram's short links and TikTok's `www.tt.site` share links |
   | Allowed chats | any | Only messages from these chat ids. **Fill this in** unless anyone may use your bot, see [Who can use the bot](#who-can-use-the-bot) |
   | Failure replies | private chats | Explain failures: never, in private chats, or everywhere |
-  | Reactions | on | 👀 while working, 👎 on failure |
+  | Reactions | on | 👀 while working, 🤷 on failure |
   | Post text as captions | on | Post the title or post text as the caption (plain text); text longer than 1024 characters follows as a separate message |
   | History | 90 days | Finished entries older than this are removed from the list; 0 keeps them forever |
 

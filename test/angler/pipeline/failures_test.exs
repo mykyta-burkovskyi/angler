@@ -80,7 +80,7 @@ defmodule Angler.Pipeline.FailuresTest do
     message_id = entry.message_id
 
     assert_receive {:bot_api, "setMessageReaction",
-                    %{"message_id" => ^message_id, "reaction" => [%{"emoji" => "👎"}]}},
+                    %{"message_id" => ^message_id, "reaction" => [%{"emoji" => "🤷"}]}},
                    @timeout
 
     assert_receive {:bot_api, "sendMessage",
@@ -120,7 +120,7 @@ defmodule Angler.Pipeline.FailuresTest do
     assert_receive {:bot_api, "sendMessage", %{"text" => "Only 1 of 2 items could be sent."}},
                    @timeout
 
-    assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👎"}]}},
+    assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "🤷"}]}},
                    @timeout
   end
 

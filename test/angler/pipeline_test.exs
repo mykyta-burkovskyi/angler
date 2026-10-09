@@ -45,7 +45,7 @@ defmodule Angler.PipelineTest do
       entry_id = entry.id
       assert_receive {:entry_updated, %Entry{id: ^entry_id, status: :failed} = failed}, @timeout
       assert_reactions("👀", 1)
-      assert_reactions("👎", 1)
+      assert_reactions("🤷", 1)
 
       # Pretend the running pipeline works on it: a second start must not recover it.
       Entries.update!(failed, %{status: :downloading})
@@ -323,7 +323,7 @@ defmodule Angler.PipelineTest do
                        @timeout
 
         assert_receive {:bot_api, "setMessageReaction",
-                        %{"chat_id" => ^chat_id, "reaction" => [%{"emoji" => "👎"}]}},
+                        %{"chat_id" => ^chat_id, "reaction" => [%{"emoji" => "🤷"}]}},
                        @timeout
       end
 
@@ -341,7 +341,7 @@ defmodule Angler.PipelineTest do
       assert_receive {:entry_updated, %Entry{id: ^id, status: :failed}}, @timeout
 
       assert_receive {:bot_api, "setMessageReaction",
-                      %{"chat_id" => ^group_id, "reaction" => [%{"emoji" => "👎"}]}},
+                      %{"chat_id" => ^group_id, "reaction" => [%{"emoji" => "🤷"}]}},
                      @timeout
 
       refute_receive {:bot_api, "sendMessage", _params}, 300
@@ -370,7 +370,7 @@ defmodule Angler.PipelineTest do
 
       for _attempt <- 1..3, do: assert_received({:fake_media, :download, ^url, _dir, _opts})
       assert_reactions("👀", 1)
-      assert_reactions("👎", 1)
+      assert_reactions("🤷", 1)
       refute_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👀"}]}}, 100
     end
 
@@ -399,7 +399,7 @@ defmodule Angler.PipelineTest do
       assert_received {:fake_media, :prepare, _download, _dir, _opts}
       assert_received {:fake_media, :prepare, _download, _dir, _opts}
       assert_reactions("👀", 2)
-      assert_reactions("👎", 2)
+      assert_reactions("🤷", 2)
     end
   end
 
@@ -538,7 +538,7 @@ defmodule Angler.PipelineTest do
 
       refute_receive {:bot_api, "sendMessage", _params}, 300
       refute_received {:bot_api, "sendVideo", _params}
-      refute_received {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👎"}]}}
+      refute_received {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "🤷"}]}}
 
       # A local Bot API server may still be reading the video from its path.
       assert %Entry{status: :failed, purged_at: nil} = unconfirmed = Entries.get(id)
@@ -581,7 +581,7 @@ defmodule Angler.PipelineTest do
       assert failed.error =~ "bot was kicked"
 
       assert_receive {:bot_api, "setMessageReaction",
-                      %{"chat_id" => ^chat_id, "reaction" => [%{"emoji" => "👎"}]}},
+                      %{"chat_id" => ^chat_id, "reaction" => [%{"emoji" => "🤷"}]}},
                      @timeout
 
       refute_receive {:bot_api, "sendMessage", _params}, 300
@@ -635,7 +635,7 @@ defmodule Angler.PipelineTest do
 
       # The usual failure feedback.
       assert_receive {:bot_api, "setMessageReaction",
-                      %{"chat_id" => ^exhausted_chat_id, "reaction" => [%{"emoji" => "👎"}]}},
+                      %{"chat_id" => ^exhausted_chat_id, "reaction" => [%{"emoji" => "🤷"}]}},
                      @timeout
 
       assert_receive {:bot_api, "sendMessage",
@@ -703,7 +703,7 @@ defmodule Angler.PipelineTest do
 
       refute_receive {:bot_api, "sendMessage", _params}, 300
       refute_received {:bot_api, "sendVideo", %{"chat_id" => ^uploading_chat_id}}
-      refute_received {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👎"}]}}
+      refute_received {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "🤷"}]}}
       assert_receive {:bot_api, "sendChatAction", _params}, @timeout
     end
 

@@ -353,7 +353,7 @@ defmodule Angler.Pipeline.AlbumUploadTest do
 
       assert_chat_action(entry)
 
-      assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👎"}]}},
+      assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "🤷"}]}},
                      @timeout
     end
 
@@ -458,7 +458,7 @@ defmodule Angler.Pipeline.AlbumUploadTest do
       assert_chat_action(entry)
       assert_partial_reply(entry, "Only 6 of 12 items could be sent.")
 
-      assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👎"}]}},
+      assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "🤷"}]}},
                      @timeout
     end
 
@@ -481,7 +481,7 @@ defmodule Angler.Pipeline.AlbumUploadTest do
       assert_chat_action(entry)
       assert_partial_reply(entry, "Only 6 of 12 items could be sent.")
 
-      assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👎"}]}},
+      assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "🤷"}]}},
                      @timeout
     end
   end
@@ -501,7 +501,7 @@ defmodule Angler.Pipeline.AlbumUploadTest do
       assert_receive {:bot_api, "sendMessage", %{"text" => "Only 1 of 2 items could be sent."}},
                      @timeout
 
-      assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "👎"}]}},
+      assert_receive {:bot_api, "setMessageReaction", %{"reaction" => [%{"emoji" => "🤷"}]}},
                      @timeout
     end
 

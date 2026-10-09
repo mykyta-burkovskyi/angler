@@ -132,7 +132,7 @@ defmodule Angler.Pipeline.ProducerTest do
       exhausted_message_id = exhausted.message_id
 
       assert_receive {:bot_api, "setMessageReaction",
-                      %{"message_id" => ^exhausted_message_id, "reaction" => [%{"emoji" => "👎"}]}},
+                      %{"message_id" => ^exhausted_message_id, "reaction" => [%{"emoji" => "🤷"}]}},
                      @timeout
 
       assert_receive {:bot_api, "sendMessage",
