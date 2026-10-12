@@ -1,7 +1,8 @@
 defmodule Angler.Media.Download do
   @moduledoc """
-  The result of downloading a link with yt-dlp, the images and sound of a
-  slideshow (`Angler.Media.Slideshow`), or the photos and videos of an Instagram
+  The result of downloading a link with yt-dlp (or the video of a Threads post,
+  `Angler.Media.Threads.Video`), the images and sound of a slideshow
+  (`Angler.Media.Slideshow`), or the photos and videos of an Instagram or Threads
   post (an album).
 
     * `:path` - absolute path of the downloaded media file
@@ -12,7 +13,7 @@ defmodule Angler.Media.Download do
     * `:kind` - `:video | :slideshow | :album`:
       * `:video` - a single media file at `:path`
       * `:slideshow` - photos with a sound: a TikTok photo post (`:path` is
-        `slides/`), or an Instagram photo post with music (`:path` is `album/`,
+        `slides/`), or an Instagram or Threads photo post with music (`:path` is `album/`,
         images at `album/NN/source.jpg`, the sound in `album/sound/`: the post's
         clip cut to `clip.flac`, or the downloaded song, `audio.m4a` or
         `audio.mp3`, when the clip is the whole song). `:path` is the directory

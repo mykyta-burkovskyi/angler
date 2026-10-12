@@ -1,11 +1,11 @@
 # Angler
 
 A self-hosted Telegram bot that turns links into videos and photos. Post a TikTok,
-Instagram, YouTube, X, Reddit or similar link in a chat, and Angler replies to the
-message with the media itself: the video, downloaded with
+Instagram, Threads, YouTube, X, Reddit or similar link in a chat, and Angler
+replies to the message with the media itself: the video, downloaded with
 [yt-dlp](https://github.com/yt-dlp/yt-dlp), shrunk with ffmpeg when needed so it
 fits Telegram's upload limit, and playable inline, or the photos and videos of an
-Instagram post as an album. A web dashboard shows every link as it moves through
+Instagram or Threads post as an album. A web dashboard shows every link as it moves through
 the pipeline and lets you tune storage and filtering.
 
 ## Features
@@ -21,13 +21,14 @@ the pipeline and lets you tune storage and filtering.
   and temporary failures (network errors, rate limits, timeouts) are retried
   with backoff. See [Restarts](#restarts) for the fine print.
 - **Photo slideshows.** TikTok photo posts (`/photo/` links, short links, or
-  slideshows behind `/video/` links), and Instagram photo posts with music when
-  [cookies](#cookies) are configured, are turned into a video: the photos in
-  order, each shown for 3–6 s and cycled for the length of the sound (up to
-  90 s; a single photo stays up for the whole sound), on a canvas matching the
-  photos' shape with a blurred fill. Instagram posts play the part of the song
-  the post uses, looped when the photos outlast it. TikTok posts without a sound
-  become silent videos.
+  slideshows behind `/video/` links), Threads photo posts with music, and
+  Instagram photo posts with music when [cookies](#cookies) are configured, are
+  turned into a video: the photos in order, each shown for 3–6 s and cycled for
+  the length of the sound (up to 90 s; a single photo stays up for the whole
+  sound), on a canvas matching the photos' shape with a blurred fill. Instagram
+  and Threads posts play the part of the song the post uses (on Threads, the
+  30 seconds from where the post's clip starts), looped when the photos outlast
+  it. TikTok posts without a sound become silent videos.
 - **Instagram photos and carousels.** Photo posts and carousels (up to 20 photos
   and videos) are sent as they are, in order: a single photo as a photo, anything
   more as Telegram albums of up to 10 items (larger carousels arrive as several
@@ -39,8 +40,17 @@ the pipeline and lets you tune storage and filtering.
   visitors); carousels with videos stay albums. Posts are read without logging
   in; [cookies](#cookies) are otherwise only a fallback. Share links,
   `instagr.am` links and `?img_index=` links to the same post work too.
+- **Threads posts.** yt-dlp can't read Threads, so Angler reads the post page
+  itself, logged out and without cookies, and delivers posts like Instagram's: a
+  video as a video (fitted to the upload limit like any other), photos and
+  carousels as albums with the post text, and photo posts with music as
+  slideshow videos (Threads shows the music to logged-out visitors). Posts
+  without photos or videos (text, links, quotes, GIFs) are refused, and only the
+  linked post is sent, not the rest of its thread. Share links
+  (`threads.com/share/...`), `/t/` links and `threads.net` links work too. Posts
+  Threads doesn't show to logged-out visitors fail.
 - **Post text as captions.** Media is posted with its title or post text (the
-  YouTube title, the TikTok or Instagram post text, ...) as a plain-text caption.
+  YouTube title, the TikTok, Instagram or Threads post text, ...) as a plain-text caption.
   Text longer than Telegram's 1024-character caption limit follows as a separate
   message replying to the media (up to 4096 characters) instead of being cut.
   With the local Bot API server, whose long uploads may never be confirmed, the
@@ -300,7 +310,7 @@ whether the bot and webhook are working.
   | Max source size | 1024 MB | Larger downloads are refused |
   | Max duration | 30 min | Longer videos are refused before downloading |
   | Upload target | Bot API maximum | Size produced videos must fit (50 or 2000 MB) |
-  | Allowed hosts | TikTok (and `tt.site`), Instagram (and `instagr.am`), YouTube, X, Reddit, … | Only links to these sites; empty allows any public site (private and LAN addresses stay blocked, see `ALLOW_PRIVATE_NETWORK_DOWNLOADS`). `instagr.am` and `tt.site` are only in the defaults of new installs: add them to an existing list for Instagram's short links and TikTok's `www.tt.site` share links |
+  | Allowed hosts | TikTok (and `tt.site`), Instagram (and `instagr.am`), Threads, YouTube, X, Reddit, … | Only links to these sites; empty allows any public site (private and LAN addresses stay blocked, see `ALLOW_PRIVATE_NETWORK_DOWNLOADS`). `instagr.am` and `tt.site` are only in the defaults of new installs: add them to an existing list for Instagram's short links and TikTok's `www.tt.site` share links |
   | Allowed chats | any | Only messages from these chat ids. **Fill this in** unless anyone may use your bot, see [Who can use the bot](#who-can-use-the-bot) |
   | Failure replies | private chats | Explain failures: never, in private chats, or everywhere |
   | Reactions | on | 👀 while working, 🤷 on failure |
@@ -473,6 +483,7 @@ How Angler uses the cookies file:
 - **TikTok posts** are looked up logged out first (to tell photo posts from
   videos). When TikTok hides the post, or its page can't be read, the page is
   loaded once more with the cookies. Short links are always resolved without them.
+- **Threads posts** never use the cookies: Angler reads them logged out only.
 - Angler never sends the cookies to the servers the photos, videos and songs
   come from, to short-link resolvers or to any redirect target. For its own
   requests it skips lines it can't use (logged by line number, never their
@@ -563,6 +574,10 @@ the same `media` volume, read-only, at the same path.
   `YTDLP_UPDATE_CHANNEL=nightly` (or rebuild the image), and add
   [cookies](#cookies) for sites that require a login. Instagram posts that Angler
   can't read itself are handed to yt-dlp, so a current yt-dlp helps there too.
+- **Threads links fail with "not shown to logged-out visitors".** Threads keeps
+  some posts (private accounts, deleted posts, and some others) from visitors who
+  aren't logged in, and Angler reads Threads logged out only. Links to a post
+  without photos or videos (text only) fail as having none.
 - **Instagram photo posts with music arrive as albums.** Angler needs a cookies
   file with a logged-in Instagram session to see a post's music. The log tells
   why (no Instagram login in the file or it has expired, login not accepted,
@@ -604,7 +619,7 @@ received.
 
 ```sh
 mix test                    # needs the Postgres above; ffmpeg-based tests run when ffmpeg/ffprobe are on PATH
-mix test --include network  # also tests that reach the internet (real yt-dlp downloads, live Instagram posts)
+mix test --include network  # also tests that reach the internet (real yt-dlp downloads, live Instagram and Threads posts)
 mix precommit               # compile with warnings as errors, format, test: run before committing
 ```
 

@@ -281,6 +281,25 @@ defmodule Angler.Media.AlbumTest do
                download(post([]), Path.join(dir, "empty"))
     end
 
+    test "names a Threads post as such", %{tmp_dir: dir} do
+      stub_cdn(fn conn, name ->
+        if name =~ "photo-2", do: Plug.Conn.send_resp(conn, 404, ""), else: bytes(conn, name)
+      end)
+
+      post = %{post([photo(1), photo(2)]) | site: "Threads", caption: nil}
+
+      log =
+        capture_log(fn ->
+          assert {:ok, %Download{extractor: "Threads", title: "Post by @instagram"}} =
+                   download(post, dir)
+        end)
+
+      assert log =~ "Skipping item 2 of a Threads post: HTTP 404, HTTP 404"
+
+      assert {:error, %Error{message: "This Threads post has no photos or videos"}} =
+               download(%{post | items: []}, Path.join(dir, "empty"))
+    end
+
     test "downloads at most 20 items", %{tmp_dir: dir} do
       stub_cdn()
 

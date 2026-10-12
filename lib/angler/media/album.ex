@@ -1,7 +1,7 @@
 defmodule Angler.Media.Album do
   @moduledoc """
-  The photos and videos of an Instagram post (`Angler.Media.Instagram.Post`), sent
-  as they are: an album.
+  The photos and videos of an Instagram or Threads post
+  (`Angler.Media.Instagram.Post`), sent as they are: an album.
 
   `download/3` fetches every item, in display order, into its own directory
   `<dir>/album/NN/` (`source.jpg` or `source.mp4`) and returns a
@@ -22,6 +22,7 @@ defmodule Angler.Media.Album do
   """
   require Logger
 
+  alias Angler.Media
   alias Angler.Media.{Download, Error, Fetch}
   alias Angler.Media.Album.Prepare
   alias Angler.Media.Instagram.{Cdn, Post}
@@ -33,7 +34,6 @@ defmodule Angler.Media.Album do
   @max_video_bytes 300_000_000
   @photo_timeout :timer.minutes(2)
   @video_timeout :timer.minutes(10)
-  @noun "Instagram post"
 
   @doc """
   Downloads the items of `post` into `<dir>/album`.
@@ -55,6 +55,7 @@ defmodule Angler.Media.Album do
 
     job = %{
       album: album,
+      noun: "#{post.site} post",
       budget: Fetch.budget(limit),
       final?: Keyword.get(opts, :final_attempt, true),
       report: Keyword.get(opts, :on_progress) || fn _progress -> :ok end
@@ -70,7 +71,7 @@ defmodule Angler.Media.Album do
          items: items,
          max_duration: Keyword.get(opts, :max_duration),
          title: Post.title(post),
-         extractor: "Instagram",
+         extractor: post.site,
          webpage_url: post.webpage_url
        }}
     end
@@ -94,8 +95,8 @@ defmodule Angler.Media.Album do
     end
   end
 
-  defp download_items([], _job),
-    do: {:error, Error.new(:unsupported, "This Instagram post has no photos or videos")}
+  defp download_items([], job),
+    do: {:error, Error.new(:unsupported, "This #{job.noun} has no photos or videos")}
 
   defp download_items(items, job) do
     total = length(items)
@@ -118,7 +119,7 @@ defmodule Angler.Media.Album do
           {:cont, {[item | downloaded], done + 1}}
 
         {:skip, reason} ->
-          Logger.warning("Skipping item #{index} of an Instagram post: #{reason}")
+          Logger.warning("Skipping item #{index} of #{Media.with_article(job.noun)}: #{reason}")
           {:cont, {downloaded, done + 1}}
 
         {:error, error} ->
@@ -127,7 +128,7 @@ defmodule Angler.Media.Album do
     end)
     |> case do
       {:error, error} -> {:error, error}
-      {[], _done} -> {:error, Error.new(:unavailable, "Could not download the Instagram post")}
+      {[], _done} -> {:error, Error.new(:unavailable, "Could not download the #{job.noun}")}
       {downloaded, _done} -> {:ok, Enum.reverse(downloaded)}
     end
   end
@@ -144,7 +145,7 @@ defmodule Angler.Media.Album do
       |> Enum.reduce_while([], fn url, failures ->
         case Cdn.fetch(url, path, max_bytes: max_bytes, timeout: timeout, budget: job.budget) do
           {:ok, size} -> {:halt, {:ok, downloaded(item, path, size)}}
-          {:error, :over_budget} -> {:halt, {:error, Fetch.over_budget(limit(job), @noun)}}
+          {:error, :over_budget} -> {:halt, {:error, Fetch.over_budget(limit(job), job.noun)}}
           {:error, {:write, _posix} = reason} -> {:halt, {:error, Fetch.write_error(reason)}}
           {:error, reason} -> {:cont, [reason | failures]}
         end
@@ -153,7 +154,7 @@ defmodule Angler.Media.Album do
         failures when is_list(failures) ->
           File.rm(path)
           File.rmdir(item_dir)
-          message = "Could not download item #{index} of the Instagram post"
+          message = "Could not download item #{index} of the #{job.noun}"
           Fetch.failure(failures, message, job.final?)
 
         result ->

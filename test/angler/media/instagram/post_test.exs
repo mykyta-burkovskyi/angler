@@ -269,5 +269,35 @@ defmodule Angler.Media.Instagram.PostTest do
     assert Post.title(%Post{caption: "Text", username: "someone"}) == "Text"
     assert Post.title(%Post{username: "someone"}) == "Post by @someone"
     assert Post.title(%Post{}) == "Instagram post"
+    assert Post.title(%Post{site: "Threads"}) == "Threads post"
+  end
+
+  test "keeps versions of a Threads photo, not its square crops" do
+    media = Angler.ThreadsFixtures.media("DeUWxGgjHSK")
+
+    assert {:ok, %Post{items: [%{type: :photo, urls: [original, smaller]}]}} =
+             Post.from_media(media)
+
+    # The 4096x2731 original, then its 1080x720 version (not the 1080x1080 crop).
+    assert original =~ "stp=dst-jpg_e35_tt6"
+    assert smaller =~ "stp=dst-jpg_e35_s1080x1080_tt6"
+
+    # When the original is too large for Telegram, the smaller version comes first.
+    huge = %{media | "original_width" => 4096 * 3, "original_height" => 2731 * 3}
+
+    huge =
+      update_in(huge, ["image_versions2", "candidates"], fn [first | rest] ->
+        [%{first | "width" => 4096 * 3, "height" => 2731 * 3} | rest]
+      end)
+
+    assert {:ok, %Post{items: [%{urls: [^smaller, next]}]}} = Post.from_media(huge)
+    assert next =~ "stp=dst-jpg_e35_s720x720_tt6"
+  end
+
+  test "manifest_duration/1 reads a DASH manifest's duration" do
+    assert Post.manifest_duration(~s(<MPD mediaPresentationDuration="PT1H2M3.5S">)) == 3723.5
+    assert Post.manifest_duration(~s(<MPD mediaPresentationDuration="PT0S">)) == nil
+    assert Post.manifest_duration("<MPD>") == nil
+    assert Post.manifest_duration(nil) == nil
   end
 end

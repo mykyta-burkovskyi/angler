@@ -62,7 +62,7 @@ defmodule Angler.Media.Album.PrepareTest do
       items: items,
       max_duration: Keyword.get(opts, :max_duration),
       title: "Post text",
-      extractor: "Instagram"
+      extractor: Keyword.get(opts, :extractor, "Instagram")
     }
   end
 
@@ -204,6 +204,19 @@ defmodule Angler.Media.Album.PrepareTest do
              prepare(download, dir)
 
     assert files(dir) == []
+  end
+
+  test "names the post after the download's site", %{tmp_dir: dir} do
+    download = album(dir, [{:photo, "not a photo"}], extractor: "Threads")
+
+    log =
+      capture_log(fn ->
+        assert {:error,
+                %Error{kind: :unsupported, message: "Nothing in this Threads post can be sent"}} =
+                 prepare(download, dir)
+      end)
+
+    assert log =~ "Leaving out item 1 of a Threads post: not a JPEG, PNG or WebP image"
   end
 
   test "refuses videos longer than the download's limit", %{tmp_dir: dir} do

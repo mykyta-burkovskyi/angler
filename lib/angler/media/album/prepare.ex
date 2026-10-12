@@ -34,6 +34,7 @@ defmodule Angler.Media.Album.Prepare do
   @spec run(Download.t(), Path.t(), keyword()) :: {:ok, Output.t()} | {:error, Error.t()}
   def run(%Download{kind: :album, items: items} = download, dir, opts) do
     job = %{
+      noun: "#{download.extractor || "Instagram"} post",
       target: Keyword.fetch!(opts, :target_bytes),
       max_duration: download.max_duration,
       report: Keyword.get(opts, :on_progress) || fn _progress -> :ok end,
@@ -53,7 +54,10 @@ defmodule Angler.Media.Album.Prepare do
           {:cont, [item | prepared]}
 
         {:skip, reason} ->
-          Logger.warning("Leaving out item #{index} of an Instagram post: #{reason}")
+          Logger.warning(
+            "Leaving out item #{index} of #{Media.with_article(job.noun)}: #{reason}"
+          )
+
           {:cont, prepared}
 
         {:error, error} ->
@@ -65,7 +69,7 @@ defmodule Angler.Media.Album.Prepare do
         {:error, error}
 
       [] ->
-        {:error, Error.new(:unsupported, "Nothing in this Instagram post can be sent")}
+        {:error, Error.new(:unsupported, "Nothing in this #{job.noun} can be sent")}
 
       prepared ->
         {:ok, output(download, Enum.reverse(prepared), dir)}

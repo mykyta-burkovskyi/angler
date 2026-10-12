@@ -1,7 +1,7 @@
 defmodule Angler.Pipeline.Caption do
   @moduledoc """
   The text posted with the media of an entry: its title (the YouTube title, the
-  TikTok or Instagram post text, ...), when the `title_captions` setting is on.
+  TikTok, Instagram or Threads post text, ...), when the `title_captions` setting is on.
 
   Text that fits Telegram's caption limit is the caption. Longer text (up to the
   limit of a message) is sent as a separate message right after the media instead

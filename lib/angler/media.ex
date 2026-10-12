@@ -1,9 +1,9 @@
 defmodule Angler.Media do
   @moduledoc """
   Turns a link into Telegram-ready media using yt-dlp, ffprobe and ffmpeg: a video
-  (also a photo slideshow rendered as one: a TikTok photo post, or an Instagram
-  photo post with music), or the photos and videos of an Instagram post as an
-  album.
+  (also a photo slideshow rendered as one: a TikTok photo post, or an Instagram or
+  Threads photo post with music), or the photos and videos of an Instagram or
+  Threads post as an album.
 
   The pipeline calls the implementation configured as
   `config :angler, Angler.Pipeline, media: module` (defaults to this module), so tests
@@ -26,7 +26,8 @@ defmodule Angler.Media do
 
   This module is the behaviour and its entry point; the work is done by
   `Angler.Media.Route` (which picks one of `Angler.Media.Ytdlp`,
-  `Angler.Media.Slideshow` and `Angler.Media.Album` for a link),
+  `Angler.Media.Slideshow`, `Angler.Media.Album` and `Angler.Media.Threads.Video`
+  for a link),
   `Angler.Media.Prepare` (making videos Telegram-ready) and `Angler.Media.Tools`
   (tool versions). It also holds helpers shared by the `Angler.Media.*` modules.
   """
@@ -80,9 +81,11 @@ defmodule Angler.Media do
   Instagram photo posts with music are slideshows
   (`Angler.Media.Slideshow.download_instagram/4`), other Instagram posts with
   photos or several items albums (`Angler.Media.Album.download/3`), TikTok photo
-  posts slideshows (`Angler.Media.Slideshow.download/3`), and everything else
-  goes to yt-dlp (`Angler.Media.Ytdlp.download/3`), with the canonical URL of a
-  TikTok video and the post text of an Instagram video as its title.
+  posts slideshows (`Angler.Media.Slideshow.download/3`), Threads posts like
+  Instagram's except that a single video comes straight from the CDN
+  (`Angler.Media.Threads.route/1`), and everything else goes to yt-dlp
+  (`Angler.Media.Ytdlp.download/3`), with the canonical URL of a TikTok video and
+  the post text of an Instagram video as its title.
 
   yt-dlp refuses videos longer than `:max_duration` only when the site reports the
   duration, and what it reports can be wrong. So when there is a limit, the
@@ -199,4 +202,11 @@ defmodule Angler.Media do
   @spec format_mb(non_neg_integer()) :: String.t()
   def format_mb(bytes) when rem(bytes, 1_000_000) == 0, do: "#{div(bytes, 1_000_000)} MB"
   def format_mb(bytes), do: "#{:erlang.float_to_binary(bytes / 1_000_000, decimals: 1)} MB"
+
+  @doc ~S'A noun with its indefinite article for messages, e.g. `"an Instagram post"`, `"a Threads post"`.'
+  @spec with_article(String.t()) :: String.t()
+  def with_article(<<first::utf8, _rest::binary>> = noun) when first in ~c"AEIOUaeiou",
+    do: "an " <> noun
+
+  def with_article(noun), do: "a " <> noun
 end

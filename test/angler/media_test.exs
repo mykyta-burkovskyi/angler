@@ -44,6 +44,12 @@ defmodule Angler.MediaTest do
     assert Media.format_mb(102_400) == "0.1 MB"
   end
 
+  test "with_article/1 puts the indefinite article before a noun" do
+    assert Media.with_article("Instagram post") == "an Instagram post"
+    assert Media.with_article("Threads post") == "a Threads post"
+    assert Media.with_article("") == "a "
+  end
+
   test "format_duration/1 formats time limits" do
     assert Media.format_duration(:timer.minutes(30)) == "30 minutes"
     assert Media.format_duration(:timer.minutes(1)) == "1 minute"
@@ -146,6 +152,60 @@ defmodule Angler.MediaTest do
 
       assert {photo.type, File.read!(photo.path)} == {:photo, "1.jpg"}
       assert {video.type, File.read!(video.path)} == {:video, "2.mp4"}
+    end
+  end
+
+  describe "download/3 of Threads posts" do
+    @describetag :tmp_dir
+    @describetag :capture_log
+
+    # The post page on Threads, and the files on Instagram's CDN.
+    defp stub_threads(media) do
+      Angler.ThreadsFixtures.stub_pages(%{media["code"] => media})
+
+      Req.Test.stub(Angler.Media.Instagram, fn conn ->
+        Plug.Conn.send_resp(conn, 200, Path.basename(conn.request_path))
+      end)
+    end
+
+    test "downloads a single video from the CDN", %{tmp_dir: dir} do
+      stub_threads(Angler.ThreadsFixtures.media("DeMqtuYgkaL"))
+
+      assert {:ok, %Download{kind: :video} = download} =
+               Media.download("https://www.threads.com/@nasa/post/DeMqtuYgkaL", dir,
+                 max_source_bytes: 1_000_000
+               )
+
+      assert %Download{
+               extractor: "Threads",
+               webpage_url: "https://www.threads.com/@nasa/post/DeMqtuYgkaL",
+               duration: 89.365334
+             } = download
+
+      assert download.title =~ "Artemis II"
+      assert download.path == Path.join(dir, "source.mp4")
+      assert File.read!(download.path) =~ ".mp4"
+    end
+
+    test "downloads a carousel as an album", %{tmp_dir: dir} do
+      stub_threads(Angler.ThreadsFixtures.media("Ddt7cL5EfUG"))
+
+      assert {:ok, %Download{kind: :album, items: items} = download} =
+               Media.download("https://www.threads.com/@zuck/post/Ddt7cL5EfUG", dir,
+                 max_source_bytes: 1_000_000,
+                 max_duration: 600
+               )
+
+      assert length(items) == 9
+      assert %Download{extractor: "Threads", max_duration: 600} = download
+      assert download.webpage_url == "https://www.threads.com/@zuck/post/Ddt7cL5EfUG"
+    end
+
+    test "fails text posts as unsupported", %{tmp_dir: dir} do
+      stub_threads(Angler.ThreadsFixtures.media("Dd1MqfcG0aH"))
+
+      assert Media.download("https://www.threads.com/@zuck/post/Dd1MqfcG0aH", dir, []) ==
+               {:error, Error.new(:unsupported, "This Threads post has no photos or videos")}
     end
   end
 

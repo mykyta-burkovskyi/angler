@@ -203,6 +203,17 @@ defmodule Angler.LinksTest do
                "https://example.com/gallery?img_index=2"
     end
 
+    test "drops the share tracking of Threads links" do
+      assert Links.normalize("https://www.threads.com/@nasa/post/DeMqtuYgkaL?xmt=AQF0abc&slof=1") ==
+               "https://www.threads.com/@nasa/post/DeMqtuYgkaL"
+
+      assert Links.normalize("https://www.threads.net/@nasa/post/DeMqtuYgkaL?XMT=a&hl=en") ==
+               "https://www.threads.net/@nasa/post/DeMqtuYgkaL?hl=en"
+
+      assert Links.normalize("https://example.com/a?xmt=1&slof=1") ==
+               "https://example.com/a?xmt=1&slof=1"
+    end
+
     test "keeps valueless parameters and existing escapes" do
       assert Links.normalize("https://example.com/a%20b?flag&q=a%26b") ==
                "https://example.com/a%20b?flag&q=a%26b"

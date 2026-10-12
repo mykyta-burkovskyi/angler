@@ -1,6 +1,7 @@
 defmodule Angler.Media.Instagram.Post do
   @moduledoc """
-  An Instagram post as read by `Angler.Media.Instagram`.
+  An Instagram post as read by `Angler.Media.Instagram`, or a Threads post as read
+  by `Angler.Media.Threads` (Threads serves its posts in Instagram's shape).
 
     * `:code` - the post's shortcode (`/p/<code>/`)
     * `:items` - the photos and videos in display order (at most 20), each
@@ -10,6 +11,8 @@ defmodule Angler.Media.Instagram.Post do
     * `:caption` - the post text, or nil
     * `:username`, `:full_name` - of the author, if known
     * `:webpage_url` - the post's canonical URL
+    * `:site` - `"Instagram"` (default) or `"Threads"`: names the post in titles,
+      messages and the download's extractor
 
   Built from Instagram's own post data (`from_media/1`: the GraphQL answer or the
   post page) or from yt-dlp's metadata of the post (`from_ytdlp/1`). A post's
@@ -20,7 +23,7 @@ defmodule Angler.Media.Instagram.Post do
   alias Angler.Media.Error
   alias Angler.Media.Instagram.Url
 
-  defstruct [:code, :caption, :username, :full_name, :webpage_url, items: []]
+  defstruct [:code, :caption, :username, :full_name, :webpage_url, items: [], site: "Instagram"]
 
   @type item :: %{
           type: :photo | :video,
@@ -36,7 +39,8 @@ defmodule Angler.Media.Instagram.Post do
           caption: String.t() | nil,
           username: String.t() | nil,
           full_name: String.t() | nil,
-          webpage_url: String.t() | nil
+          webpage_url: String.t() | nil,
+          site: String.t()
         }
 
   @max_items 20
@@ -52,9 +56,10 @@ defmodule Angler.Media.Instagram.Post do
 
   Photos (`media_type` 1) keep the first two `image_versions2.candidates` (the
   original, then a smaller version; ordered by size when the candidates carry
-  dimensions, which they don't when logged out), starting with the smaller one
-  when the original exceeds Telegram's photo limits (width + height over 10000,
-  or a side ratio over 20). Videos (`media_type` 2) keep their distinct
+  dimensions, which Instagram's don't when logged out and Threads' do), starting
+  with the smaller one when the original exceeds Telegram's photo limits (width +
+  height over 10000, or a side ratio over 20). Candidates whose shape differs from
+  the original's (Threads also lists square crops) are left out. Videos (`media_type` 2) keep their distinct
   `video_versions`; the duration comes from `video_duration` or the DASH
   manifest. Items without URLs are left out; `:unsupported` when none is left.
   """
@@ -83,6 +88,8 @@ defmodule Angler.Media.Instagram.Post do
 
     item
     |> dig(["image_versions2", "candidates"])
+    |> maps()
+    |> Enum.filter(&same_shape?(&1, width, height))
     |> by_area()
     |> urls()
     |> within_photo_limits(width, height)
@@ -105,6 +112,17 @@ defmodule Angler.Media.Instagram.Post do
 
   defp media_item(_other), do: nil
 
+  # A version of the photo rather than a crop of it: its side ratio is within 2% of
+  # the original's (or unknown).
+  defp same_shape?(candidate, width, height) when is_integer(width) and is_integer(height) do
+    case {dimension(candidate["width"]), dimension(candidate["height"])} do
+      {w, h} when is_integer(w) and is_integer(h) -> abs(w * height / (h * width) - 1) <= 0.02
+      _unknown -> true
+    end
+  end
+
+  defp same_shape?(_candidate, _width, _height), do: true
+
   # The original is too big for sendPhoto: start with the next (smaller) version.
   defp within_photo_limits([_original | [_ | _] = smaller] = urls, width, height)
        when is_integer(width) and is_integer(height) do
@@ -115,7 +133,9 @@ defmodule Angler.Media.Instagram.Post do
 
   defp within_photo_limits(urls, _width, _height), do: urls
 
-  defp manifest_duration(manifest) when is_binary(manifest) do
+  @doc "The duration in seconds a DASH manifest gives (`mediaPresentationDuration`), or nil."
+  @spec manifest_duration(term()) :: float() | nil
+  def manifest_duration(manifest) when is_binary(manifest) do
     case Regex.run(@duration_re, manifest, capture: :all_but_first) do
       [hours, minutes, seconds] ->
         with {seconds, ""} <- Float.parse(seconds) do
@@ -130,7 +150,7 @@ defmodule Angler.Media.Instagram.Post do
     end
   end
 
-  defp manifest_duration(_manifest), do: nil
+  def manifest_duration(_manifest), do: nil
 
   defp number(""), do: 0
   defp number(digits), do: String.to_integer(digits)
@@ -233,11 +253,11 @@ defmodule Angler.Media.Instagram.Post do
   def photos?(%__MODULE__{items: [_ | _] = items}), do: Enum.all?(items, &(&1.type == :photo))
   def photos?(%__MODULE__{}), do: false
 
-  @doc ~S'The post text, else "Post by @<username>", else "Instagram post".'
+  @doc ~S'The post text, else "Post by @<username>", else "Instagram post" (or "Threads post").'
   @spec title(t()) :: String.t()
   def title(%__MODULE__{caption: caption}) when is_binary(caption), do: caption
   def title(%__MODULE__{username: username}) when is_binary(username), do: "Post by @#{username}"
-  def title(%__MODULE__{}), do: "Instagram post"
+  def title(%__MODULE__{site: site}), do: "#{site} post"
 
   ## Helpers
 

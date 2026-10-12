@@ -32,6 +32,7 @@ defmodule Angler.Links do
   @twitter_hosts ~w(x.com twitter.com)
   @reddit_hosts ~w(reddit.com redd.it)
   @instagram_hosts ~w(instagram.com instagr.am)
+  @threads_hosts ~w(threads.com threads.net)
 
   # Query parameters that only track who shared a link and where; dropped everywhere.
   @tracking_params ~w(
@@ -46,7 +47,9 @@ defmodule Angler.Links do
     {@twitter_hosts, ~w(s t ref_src ref_url)},
     {@reddit_hosts, ~w(share_id rdt)},
     # The carousel item being viewed: the same post, so it must not become another entry.
-    {@instagram_hosts, ~w(img_index)}
+    {@instagram_hosts, ~w(img_index)},
+    # Threads' per-share tracking token and its share flag (on links shared from the app).
+    {@threads_hosts, ~w(xmt slof)}
   ]
 
   @doc """
@@ -69,8 +72,9 @@ defmodule Angler.Links do
   @doc """
   Normalizes a URL: trims it, adds `https://` when the scheme is missing,
   lowercases scheme and host, drops the fragment and tracking query parameters
-  (keeping all other parameters in order), and Instagram's `img_index` (the
-  carousel item being viewed). Returns nil when it can't be parsed.
+  (keeping all other parameters in order, dropping e.g. Threads' `xmt` and `slof`),
+  and Instagram's `img_index` (the carousel item being viewed). Returns nil when it
+  can't be parsed.
   """
   @spec normalize(String.t() | nil) :: String.t() | nil
   def normalize(url) when is_binary(url) do

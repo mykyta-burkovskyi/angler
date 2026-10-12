@@ -1,7 +1,7 @@
 defmodule Angler.Media.Instagram.Cdn do
   @moduledoc """
   Instagram's CDN (`*.cdninstagram.com`, `*.fbcdn.net`, https only): the only
-  hosts photos, videos and songs of Instagram posts are downloaded from. No
+  hosts photos, videos and songs of Instagram and Threads posts are downloaded from. No
   cookies, no redirects, and hosts only in the logs, since the URLs are signed.
   """
   require Logger

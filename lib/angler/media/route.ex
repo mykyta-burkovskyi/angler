@@ -7,18 +7,22 @@ defmodule Angler.Media.Route do
        photo post is a slideshow when its music can be read
        (`Angler.Media.Slideshow.Instagram`), else an album; a single video goes to
        yt-dlp with the post text as its title
-    2. TikTok links are resolved (`Angler.Media.TikTok.route/1`): photo posts are
+    2. Threads post links are read (`Angler.Media.Threads.route/1`): a single video
+       is downloaded from the CDN (`Angler.Media.Threads.Video`); photo posts and
+       posts with several items become slideshows and albums like Instagram's
+    3. TikTok links are resolved (`Angler.Media.TikTok.route/1`): photo posts are
        slideshows (`Angler.Media.Slideshow`), videos go to yt-dlp with their
        canonical URL
-    3. everything else goes to yt-dlp as it is (`Angler.Media.Ytdlp`)
+    4. everything else goes to yt-dlp as it is (`Angler.Media.Ytdlp`)
 
   yt-dlp refuses videos longer than `:max_duration` only when the site reports the
   duration (logged-out Instagram, direct links and HLS playlists often do not), and
   what it reports can be wrong (for HLS it adds up the durations the playlist
-  claims). So when there is a limit, a file yt-dlp downloaded is measured with
-  ffprobe, checked, and its measured duration returned.
+  claims). So when there is a limit, a file yt-dlp downloaded (or the video of a
+  Threads post) is measured with ffprobe, checked, and its measured duration
+  returned.
   """
-  alias Angler.Media.{Album, Download, Error, Instagram, Probe, Slideshow, TikTok, Ytdlp}
+  alias Angler.Media.{Album, Download, Error, Instagram, Probe, Slideshow, Threads, TikTok, Ytdlp}
   alias Angler.Media.Ytdlp.Outcome
 
   @duration_tolerance 1
@@ -28,7 +32,7 @@ defmodule Angler.Media.Route do
   def download(url, dir, opts) do
     case Instagram.route(url, dir, opts) do
       :not_instagram ->
-        tiktok(url, dir, opts)
+        threads(url, dir, opts)
 
       {:album, post} ->
         Album.download(post, dir, opts)
@@ -68,6 +72,26 @@ defmodule Angler.Media.Route do
     if is_number(download.duration) and download.duration > max_duration + @duration_tolerance,
       do: {:error, Error.new(:too_large, Outcome.too_long_message(max_duration))},
       else: {:ok, download}
+  end
+
+  defp threads(url, dir, opts) do
+    case Threads.route(url) do
+      :not_threads ->
+        tiktok(url, dir, opts)
+
+      {:video, post} ->
+        with {:ok, download} <- Threads.Video.download(post, dir, opts),
+             do: check_duration(download, Keyword.get(opts, :max_duration))
+
+      {:album, post} ->
+        Album.download(post, dir, opts)
+
+      {:slideshow, post, music} ->
+        Slideshow.download_instagram(post, music, dir, opts)
+
+      {:error, error} ->
+        {:error, error}
+    end
   end
 
   defp tiktok(url, dir, opts) do

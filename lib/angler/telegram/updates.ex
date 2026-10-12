@@ -34,16 +34,16 @@ defmodule Angler.Telegram.Updates do
   @help_text """
   🎣 I turn links into videos and photos.
 
-  Send me a link to a video or post (TikTok, Instagram, YouTube, X, Reddit, ...) and I'll \
-  reply with the video itself, or with the photos and videos of an Instagram post. Add me \
-  to a group and I'll do the same for links posted there.
+  Send me a link to a video or post (TikTok, Instagram, Threads, YouTube, X, Reddit, ...) \
+  and I'll reply with the video itself, or with the photos and videos of an Instagram or \
+  Threads post. Add me to a group and I'll do the same for links posted there.
 
   For groups: Telegram's privacy mode hides ordinary group messages from bots. Make me \
   a group admin, or disable privacy mode for this bot with /setprivacy in @BotFather and \
   then remove and re-add me to the group.\
   """
 
-  @hint_text "Send me a link to a video or post (TikTok, Instagram, YouTube, X, ...) and I'll reply with its media."
+  @hint_text "Send me a link to a video or post (TikTok, Instagram, Threads, YouTube, X, ...) and I'll reply with its media."
 
   @doc "Update types Angler asks Telegram for (`allowed_updates` of setWebhook / getUpdates)."
   @spec allowed_updates() :: [String.t()]

@@ -1,7 +1,8 @@
 defmodule Angler.Media.Slideshow.Instagram do
   @moduledoc """
-  An Instagram photo post with music as a slideshow (`Angler.Media.Slideshow`):
-  the post's photos, played with the post's clip of its song.
+  An Instagram (or Threads) photo post with music as a slideshow
+  (`Angler.Media.Slideshow`): the post's photos, played with the post's clip of its
+  song.
 
   `download/4`:
 
@@ -95,7 +96,7 @@ defmodule Angler.Media.Slideshow.Instagram do
 
   defp as_album(album, sound_dir, post, reason) do
     File.rm_rf(sound_dir)
-    Logger.warning("Instagram post #{post.code}: #{reason}, sending its photos as an album")
+    Logger.warning("#{post.site} post #{post.code}: #{reason}, sending its photos as an album")
     {:ok, album}
   end
 

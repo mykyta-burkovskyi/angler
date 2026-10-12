@@ -1,6 +1,6 @@
 defmodule Angler.Media.Fetch do
   @moduledoc """
-  Streams a file from a CDN (TikTok slideshows, Instagram albums and songs) to
+  Streams a file from a CDN (TikTok slideshows, Instagram and Threads posts and songs) to
   disk with a size limit and an overall deadline (Req's receive timeout only
   bounds the wait for each chunk). Media URLs need no user agent, referer or
   cookies.

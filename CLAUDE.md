@@ -2,9 +2,9 @@
 
 # Angler
 
-A self-hosted Telegram bot: people post links (TikTok, Instagram, YouTube, X, ...)
-in a chat, Angler downloads the video with yt-dlp (or an Instagram post's photos and
-videos), makes it fit Telegram's upload limit with ffmpeg when needed, and replies to
+A self-hosted Telegram bot: people post links (TikTok, Instagram, Threads, YouTube,
+X, ...) in a chat, Angler downloads the video with yt-dlp (or an Instagram or Threads
+post's photos and videos), makes it fit Telegram's upload limit with ffmpeg when needed, and replies to
 the message with the video (or an album). A Phoenix LiveView dashboard shows every
 processing entry live and lets the admin adjust storage limits and filters. Deployed
 with docker compose (app + Postgres, optional local Bot API server).
@@ -40,7 +40,8 @@ Storage.Janitor: retention + size cap eviction of kept media (Settings)
   are stripped). yt-dlp traffic goes through `Angler.Media.EgressProxy`, which refuses
   private/loopback/link-local addresses unless `ALLOW_PRIVATE_NETWORK_DOWNLOADS=true`.
 - `Angler.Media.Route` picks how a link is fetched: Instagram posts first
-  (`Angler.Media.Instagram.route/3`: album, slideshow or yt-dlp), then TikTok
+  (`Angler.Media.Instagram.route/3`: album, slideshow or yt-dlp), then Threads
+  (`Angler.Media.Threads.route/1`: video, album or slideshow), then TikTok
   (`Angler.Media.TikTok.route/1`), else yt-dlp.
 - Photo posts with a sound become one video (`Angler.Media.Slideshow`, assembled with
   ffmpeg by `Slideshow.Render`). TikTok photo posts are fetched directly
@@ -66,6 +67,17 @@ Storage.Janitor: retention + size cap eviction of kept media (Settings)
   (`Angler.Media.Album`: CDN-only fetches (`Angler.Media.Instagram.Cdn`) with a shared byte
   budget, photos checked by `Album.Photo`, videos through `Media.Prepare`, files at
   `<entry dir>/album/NN/`); a single video (reel) goes to yt-dlp with the post text as title.
+- Threads posts (yt-dlp has no Threads extractor) are read logged out only, never with
+  cookies: `Threads.Url` (share links resolved with one request) → `Threads.Page` (the
+  post page loaded like a browser navigation; the post is the `data.media` with its code
+  in a `data-sjs` blob, found by code and shape, not by query name) →
+  `Instagram.Post.from_media/1` (same shape; `Post.site` is `"Threads"`, which names the
+  post in titles, messages and the extractor). A single video is fetched from the CDN by
+  `Threads.Video` (`<dir>/source.mp4`, a `:video` download), photo-only posts with music
+  (`Threads.Music`: logged out, a 30 s clip from `audio_start_time_in_ms`) go through
+  `Slideshow.Instagram`, other posts with media are albums; posts without media are
+  `:unsupported`. Requests go only to `www.threads.com` URLs built from parsed codes
+  (one redirect to the same post is followed by hand), media only from `Instagram.Cdn`.
 - Albums: `Entry.media_kind == :album`, items in `entries.media_items`
   (`Angler.Entries.MediaItem`, paths relative to the entry dir, validated by
   `Angler.Storage.Album` before any use). `Angler.Pipeline.AlbumUpload` sends them in parts
@@ -82,8 +94,9 @@ Storage.Janitor: retention + size cap eviction of kept media (Settings)
   error messages.
 - External tools are wrapped behind `Angler.Media` (a behaviour, swappable in tests)
   and HTTP calls to Telegram go through `Angler.Telegram` (Req; tests stub it with
-  `Req.Test` under the name `Angler.Telegram`; likewise `Angler.Media.TikTok` and
-  `Angler.Media.Instagram` for TikTok/Instagram and their CDNs).
+  `Req.Test` under the name `Angler.Telegram`; likewise `Angler.Media.TikTok`,
+  `Angler.Media.Instagram` (Instagram and the CDN Instagram and Threads share) and
+  `Angler.Media.Threads`).
 - Sizes use decimal megabytes (1 MB = 1,000,000 bytes). The cloud Bot API accepts
   uploads up to 50 MB; a local Bot API server (`TELEGRAM_LOCAL_MODE=true`) up to 2000 MB.
 
